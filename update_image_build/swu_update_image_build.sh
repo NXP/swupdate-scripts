@@ -14,57 +14,8 @@ SUPPORTED_SOC="
 imx8mm
 imx6ull
 "
-
-function copy_images_to_boot_pt()
-{
-	local boot_pt=$1
-	# slot can be SLOTA or SLOTB
-	local slot=$2
-
-	echo "boot_pt: $boot_pt"
-	echo "slot: $slot"
-
-	slot_upper=$(echo $slot | tr a-z A-Z)
-	eval slot_boot_pt_files="\$${slot_upper}_BOOT_PT_FILES"
-	mkfs.vfat $boot_pt
-	mdir -i $boot_pt
-	for each_file in $slot_boot_pt_files; do
-		if [ ! -e ./${each_file} ]; then
-			echo "./${each_file} not existed!"
-			exit 1
-		fi
-		img_name=$(basename ${each_file})
-		#mdel -i $boot_pt ${img_name}
-		mcopy -i $boot_pt ./${each_file} ::${img_name}
-	done
-	mdir -i $boot_pt
-}
-
-function calculate_pt_size()
-{
-	local pt_info=$1
-
-	local pt_start=$(echo $pt_info | cut -d: -f2)
-	local pt_end=$(echo $pt_info | cut -d: -f3)
-
-	local pt_start_num=$(numfmt --from=iec ${pt_start})
-	local pt_end_num=$(numfmt --from=iec ${pt_end})
-
-
-	if [[ ${pt_start_num} -gt ${pt_end_num} ]]; then
-    	echo "partition start is greater than end!"
-    	return -1
-	fi 
-
-	local pt_size_num=`expr ${pt_end_num} - ${pt_start_num}`
-	echo "pt_size_num: $pt_size_num"
-
-	#local pt_size=$(numfmt --to=iec ${pt_size_num})
-
-	PT_SIZE=$pt_size_num
-
-	echo "Calculated partition size: $PT_SIZE"
-}
+SW_DES_MANIPU_FLAG=false
+PT_SIZE=''
 
 function print_help()
 {
@@ -74,10 +25,13 @@ function print_help()
 	echo "-e enable emmc. default is sd."
 	echo "-s Specify public key file for sign image generation."
 	echo "-b soc name. Currently, imx8mm and imx6ull are supported."
+	echo "-S Generate software description file."
+	echo "   This will use a template to generate software description file."
+	echo "   User can also create their own template file."
 	echo "-h print this help."
 }
 
-while getopts "s:o:b:deh" arg; do
+while getopts "s:o:b:deSh" arg; do
 	case $arg in
 		s)
 			SIGN_PEM_FILE=$OPTARG
@@ -96,6 +50,9 @@ while getopts "s:o:b:deh" arg; do
 			;;
 		b)
 			SOC=$OPTARG
+			;;
+		S)
+			SW_DES_MANIPU_FLAG=true
 			;;
 		h)
 			print_help
@@ -123,10 +80,67 @@ else
 	fi
 fi
 
-SOC_ASSEMBLE_SETTING_FILE="cfg_${SOC}.sh"
-source ${WRK_DIR}/${SOC_ASSEMBLE_SETTING_FILE}
+SOC_ASSEMBLE_SETTING_FILE="cfg_${SOC}.cfg"
+source ${WRK_DIR}/../boards/${SOC_ASSEMBLE_SETTING_FILE}
+source ${WRK_DIR}/../utils/utils.sh
 
-# 1. Check if need to sign image
+if [ -z "${OUTPUT_IMAGE_NAME}" ]; then
+	if [ x"$SIGN_FLAG" == x"true" ]; then
+		OUTPUT_IMAGE_NAME=${SOC_NAME}_${UPDATE_CONTAINER_VER}_slot${SLOT}_${UPDATE_BSP_VER}_${COPY_MODE}_${STORAGE_DEVICE}_${CUR_DATE}_sign.swu
+	else
+		OUTPUT_IMAGE_NAME=${SOC_NAME}_${UPDATE_CONTAINER_VER}_slot${SLOT}_${UPDATE_BSP_VER}_${COPY_MODE}_${STORAGE_DEVICE}_${CUR_DATE}_nosign.swu
+	fi
+fi
+
+# 1. Copy images to boot partition
+echo -n ">>>> Check update boot partition mirror..."
+BOOT_PT=$(echo $UPDATE_BOOT_PT | cut -d: -f1)
+if [ ! -e ${BOOT_PT} ]; then
+	echo -n "\nNo update boot partition mirror, generate..."
+	calculate_pt_size $UPDATE_BOOT_PT PT_SIZE
+	truncate -s ${PT_SIZE} ${BOOT_PT}
+fi
+echo "DONE"
+
+echo -n ">>>> Copying kernel images and dtbs to boot partition..."
+copy_images_to_boot_pt $BOOT_PT update
+echo "DONE"
+
+# 2. Truncate rootfs
+echo -n ">>>> Truncating rootfs..."
+ROOTFS_IMG=$(echo $UPDATE_ROOTFS | cut -d: -f1)
+if [ ! -e $ROOTFS_IMG ]; then
+	echo "ROOTFS image not found!"
+	exit -1
+fi
+calculate_pt_size $UPDATE_ROOTFS PT_SIZE
+truncate -s $PT_SIZE $ROOTFS_IMG
+e2fsck -f $ROOTFS_IMG
+resize2fs $ROOTFS_IMG
+echo "DONE"
+
+# 3. Test if all needed images exist
+echo -n ">>>> Testing update images..."
+for each_img in ${UPDATE_IMAGES}; do
+	test ! -e "${each_img}" && echo "${each_img} not exists!!!" && exit -1;
+done
+echo "DONE"
+
+# 4. Compress update image files 
+echo -n ">>>> Compress update images..."
+for each_img in ${UPDATE_IMAGES}; do
+	gzip -9kf ${each_img}
+done
+echo "DONE"
+
+# 5. Generate sw-decription file
+echo -n ">>>> Check sw-decription file..."
+if [ x$SW_DES_MANIPU_FLAG == xtrue ]; then
+	generate_sw_desc ${WRK_DIR}/sw-description $SW_DESCRIPTION_TEMPLATE UPDATE_IMAGES
+fi
+echo "DONE"
+
+# 6. Check if need to sign image
 echo -n ">>>> Check if need a sign image..."
 UPDATE_FILES="sw-description"
 if [ x"$SIGN_FLAG" == x"true" ]; then
@@ -155,58 +169,7 @@ for each_item in $UPDATE_IMAGES; do
 	UPDATE_FILES="$UPDATE_FILES ${each_item}.gz"
 done
 
-if [ -z "${OUTPUT_IMAGE_NAME}" ]; then
-	if [ x"$SIGN_FLAG" == x"true" ]; then
-		OUTPUT_IMAGE_NAME=${SOC_NAME}_${UPDATE_CONTAINER_VER}_slot${SLOT}_${UPDATE_BSP_VER}_${COPY_MODE}_${STORAGE_DEVICE}_${CUR_DATE}_sign.swu
-	else
-		OUTPUT_IMAGE_NAME=${SOC_NAME}_${UPDATE_CONTAINER_VER}_slot${SLOT}_${UPDATE_BSP_VER}_${COPY_MODE}_${STORAGE_DEVICE}_${CUR_DATE}_nosign.swu
-	fi
-fi
-
-# 2. Copy images to boot partition
-echo -n ">>>> Check update boot partition mirror..."
-BOOT_PT=$(echo $UPDATE_BOOT_PT | cut -d: -f1)
-if [ ! -e ${BOOT_PT} ]; then
-	echo -n "\nNo update boot partition mirror, generate..."
-	PT_SIZE=''
-	calculate_pt_size $UPDATE_BOOT_PT
-	truncate -s ${PT_SIZE} ${BOOT_PT}
-fi
-echo "DONE"
-
-echo -n ">>>> Copying kernel images and dtbs to boot partition..."
-copy_images_to_boot_pt $BOOT_PT update
-echo "DONE"
-
-# 3. Truncate rootfs
-echo -n ">>>> Truncating rootfs..."
-PT_SIZE=''
-ROOTFS_IMG=$(echo $UPDATE_ROOTFS | cut -d: -f1)
-if [ ! -e $ROOTFS_IMG ]; then
-	echo "ROOTFS image not found!"
-	exit -1
-fi
-calculate_pt_size $UPDATE_ROOTFS
-truncate -s $PT_SIZE $ROOTFS_IMG
-e2fsck -f $ROOTFS_IMG
-resize2fs $ROOTFS_IMG
-echo "DONE"
-
-# 4. Test if all needed images exist
-echo -n ">>>> Testing update images..."
-for each_img in ${UPDATE_IMAGES}; do
-	test ! -e "${each_img}" && echo "${each_img} not exists!!!" && exit -1;
-done
-echo "DONE"
-
-# 5. Compress update image files 
-echo -n ">>>> Compress update images..."
-for each_img in ${UPDATE_IMAGES}; do
-	gzip -9kf ${each_img}
-done
-echo "DONE"
-
-# 6. assemble cpio package.
+# 7. assemble cpio package.
 echo ">>>> Creating CPIO package..."
 echo $UPDATE_FILES
 for each_item in $UPDATE_FILES; do

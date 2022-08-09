@@ -28,95 +28,6 @@ function generate_mbr_dualslot()
 	truncate -s 512 ${PT_DISKLABEL}
 }
 
-function generate_padding_file()
-{
-	local pad_base=$1
-	local pad_filename=$2
-	local pad_size=$3
-	local output_pad_file=$4
-
-	echo "pad_base: $pad_base"
-	echo "pad_filename: $pad_filename"
-	echo "pad_size: $pad_size"
-	echo "output_pad_file: $output_pad_file"
-
-	local pad_base_num=$(numfmt --from=iec ${pad_base})
-	local pad_size_num=$(numfmt --from=iec ${pad_size})
-
-	
-	local pad_file_size=$(wc -c ${pad_filename} | cut -d" " -f1)
-
-	local pad_start=`expr ${pad_base_num} + ${pad_file_size}`
-
-	if [[ ${pad_start} -gt ${pad_size_num} ]]; then
-		echo "pad_start:${pad_start} (pad_base:${pad_base_num} + pad file size:${pad_file_size}) > pad end: ${pad_size_num}" 
-		return -1
-	fi
-
-	if [[ ${pad_start} -eq ${pad_size_num} ]]; then
-    	echo "no need padding."
-    	return 0
-	fi 
-
-	padding_size=`expr ${pad_size_num} - ${pad_start}`
-
-	echo "${padding_size} need to add to pad to ${pad_size_num}"
-
-	cp $pad_filename $output_pad_file
-	truncate -s +${padding_size} ${output_pad_file}
-}
-
-function copy_images_to_boot_pt()
-{
-	local boot_pt=$1
-	# slot can be SLOTA or SLOTB
-	local slot=$2
-
-	echo "boot_pt: $boot_pt"
-	echo "slot: $slot"
-
-	slot_upper=$(echo $slot | tr a-z A-Z)
-	eval slot_boot_pt_files="\$${slot_upper}_BOOT_PT_FILES"
-	mkfs.vfat $boot_pt
-	mdir -i $boot_pt
-	for each_file in $slot_boot_pt_files; do
-		if [ ! -e ./${each_file} ]; then
-			echo "./${each_file} not existed!"
-			exit 1
-		fi
-		img_name=$(basename ${each_file})
-		#mdel -i $boot_pt ${img_name}
-		mcopy -i $boot_pt ./${each_file} ::${img_name}
-	done
-	mdir -i $boot_pt
-}
-
-function calculate_pt_size()
-{
-	local pt_info=$1
-
-	local pt_start=$(echo $pt_info | cut -d: -f2)
-	local pt_end=$(echo $pt_info | cut -d: -f3)
-
-	local pt_start_num=$(numfmt --from=iec ${pt_start})
-	local pt_end_num=$(numfmt --from=iec ${pt_end})
-
-
-	if [[ ${pt_start_num} -gt ${pt_end_num} ]]; then
-    	echo "partition start is greater than end!"
-    	return -1
-	fi 
-
-	local pt_size_num=`expr ${pt_end_num} - ${pt_start_num}`
-	echo "pt_size_num: $pt_size_num"
-
-	#local pt_size=$(numfmt --to=iec ${pt_size_num})
-
-	PT_SIZE=$pt_size_num
-
-	echo "Calculated partition size: $PT_SIZE"
-}
-
 function print_help()
 {
 	echo "$0 - generate update image"
@@ -143,6 +54,7 @@ DOUBLESLOT_FLAG=false
 COPY_MODE="singlecopy"
 STORAGE_EMMC_FLAG=false
 STORAGE_DEVICE="sd"
+PT_SIZE=''
 
 while getopts "o:deb:h" arg; do
 	case $arg in
@@ -187,7 +99,8 @@ else
 fi
 
 SOC_ASSEMBLE_SETTING_FILE="cfg_${SOC}.cfg"
-source ${WRK_DIR}/${SOC_ASSEMBLE_SETTING_FILE}
+source ${WRK_DIR}/../boards/${SOC_ASSEMBLE_SETTING_FILE}
+source ${WRK_DIR}/../utils/utils.sh
 
 if [ -z "${OUTPUT_IMAGE_NAME}" ]; then
 	echo "No output image name specified! Use default name!"
@@ -214,21 +127,21 @@ echo "DONE"
 echo -n ">>>> Check slota boot partition mirror..."
 BOOT_PT=$(echo $SLOTA_BOOT_PT | cut -d: -f1)
 if [ ! -e ${BOOT_PT} ]; then
-	echo -n "\nNo slata boot partition mirror, generate..."
+	echo ""
+	echo -n "No slata boot partition mirror, generate..."
 	cd $BOOT_PT_DIR
-	PT_SIZE=''
-	calculate_pt_size $SLOTA_BOOT_PT
+	calculate_pt_size $SLOTA_BOOT_PT PT_SIZE
 	truncate -s ${PT_SIZE} ${BOOT_PT}
 	cd -
 fi
 echo "DONE"
 
 echo -n ">>>> Check slotb boot partition mirror..."
-BOOT_PT=$(echo $SLOTA_BOOT_PT | cut -d: -f1)
+BOOT_PT=$(echo $SLOTB_BOOT_PT | cut -d: -f1)
 if [ ! -e ${BOOT_PT} ]; then
+	echo ""
 	echo -n "\nNo slatb boot partition mirror, generate..."
-	PT_SIZE=''
-	calculate_pt_size $SLOTA_BOOT_PT
+	calculate_pt_size $SLOTB_BOOT_PT PT_SIZE
 	truncate -s ${PT_SIZE} ${BOOT_PT}
 fi
 echo "DONE"
@@ -288,13 +201,12 @@ echo "DONE"
 echo ">>>> Making slota..."
 BOOT_PT_PATH=$(echo $SLOTA_BOOT_PT | cut -d: -f1)
 copy_images_to_boot_pt $BOOT_PT_PATH slota
-PT_SIZE=''
 ROOTFS_IMG=$(echo $SLOTA_ROOTFS | cut -d: -f1)
 if [ ! -e $ROOTFS_IMG ]; then
 	echo "SLOTA ROOTFS image not found!"
 	exit -1
 fi
-calculate_pt_size $SLOTA_ROOTFS
+calculate_pt_size $SLOTA_ROOTFS PT_SIZE
 truncate -s $PT_SIZE $ROOTFS_IMG
 e2fsck -f $ROOTFS_IMG
 resize2fs $ROOTFS_IMG
@@ -309,13 +221,12 @@ if [ x$DOUBLESLOT_FLAG == x"true" ]; then
 	echo ">>>> Making slotb..."
 	BOOT_PT_PATH=$(echo $SLOTB_BOOT_PT | cut -d: -f1)
 	copy_images_to_boot_pt $BOOT_PT_PATH slotb
-	PT_SIZE=''
 	ROOTFS_IMG=$(echo $SLOTB_ROOTFS | cut -d: -f1)
 	if [ ! -e $ROOTFS_IMG ]; then
 		echo "SLOTB ROOTFS image not found!"
 		exit -1
 	fi
-	calculate_pt_size $SLOTB_ROOTFS
+	calculate_pt_size $SLOTB_ROOTFS PT_SIZE
 	truncate -s $PT_SIZE $ROOTFS_IMG
 	e2fsck -f $ROOTFS_IMG
 	resize2fs $ROOTFS_IMG

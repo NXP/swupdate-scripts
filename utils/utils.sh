@@ -90,14 +90,28 @@ function calculate_pt_size()
 	echo "Calculated partition size: $PT_SIZE"
 }
 
-# $1 - sw_desc file name.
+# $1 - output sw_desc file name.
 # $2 - sw desc template file.
 # $3 - image list
 function generate_sw_desc()
 {
 	local sw_desc_file=$1
-	local template_file=$2
+	shift
+	local template_file=$1
+	shift
+	local image_list=$@
 
+	echo "software desc file: $sw_desc_file"
+	echo "template file: $template_file"
+	echo "image_list: $image_list"
 
+	echo "Generating software description file..."
+	cp $template_file $sw_desc_file
+	for each_item in $image_list; do
+		sha256sum ${WRK_DIR}/${each_item}.gz
+		sha256_sum=$(sha256sum ${WRK_DIR}/${each_item}.gz | cut -d' ' -f1)
+		sed -i "s/<${each_item}.gz_sha256>/${sha256_sum}/" $sw_desc_file
+	done
+	echo "DONE"
 }
 
