@@ -52,13 +52,13 @@ function copy_images_to_boot_pt()
 	mkfs.vfat $boot_pt
 	mdir -i $boot_pt
 	for each_file in $slot_boot_pt_files; do
-		if [ ! -e ./${each_file} ]; then
-			echo "./${each_file} not existed!"
+		if [ ! -e ${each_file} ]; then
+			echo "${each_file} not existed!"
 			exit 1
 		fi
 		img_name=$(basename ${each_file})
 		#mdel -i $boot_pt ${img_name}
-		mcopy -i $boot_pt ./${each_file} ::${img_name}
+		mcopy -i $boot_pt ${each_file} ::${img_name}
 	done
 	mdir -i $boot_pt
 }
