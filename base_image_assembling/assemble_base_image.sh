@@ -16,16 +16,35 @@ function generate_mbr_dualslot()
 	fi
 
 	truncate -s ${PT_FILESIZE} ${PT_DISKLABEL}
+	if [ $? != 0 ]; then
+		echo "truncate to ${PT_FILESIZE} on ${PT_DISKLABEL} failed!"
+		exit -1
+	fi
 
 	sudo parted -s ${PT_DISKLABEL} mklabel msdos
-	sudo parted ${PT_DISKLABEL} unit MiB mkpart primary fat32 100 220
-	sudo parted ${PT_DISKLABEL} unit MiB mkpart primary ext4 220 3220
-	sudo parted ${PT_DISKLABEL} unit MiB mkpart primary fat32 3220 3340
-	sudo parted ${PT_DISKLABEL} unit MiB mkpart primary ext4 3340 6340
+	if [ $? != 0 ]; then
+		echo "mklabel msdos on ${PT_DISKLABEL} failed!"
+		exit -1
+	fi
+
+	for each_item in $IMAGE_MBR_PT_STRUCT; do
+		local pt_start=$(echo $each_item | cut -d: -f2)
+		local pt_end=$(echo $each_item | cut -d: -f3)
+		local pt_fs=$(echo $each_item | cut -d: -f4)
+		sudo parted ${PT_DISKLABEL} unit MiB mkpart primary ${pt_fs} ${pt_start}  ${pt_end}
+		if [ $? != 0 ]; then
+			echo "part ${pt_fs} from ${pt_start} to ${pt_end} on ${PT_DISKLABEL} failed!"
+			exit -1
+		fi
+	done
 	sudo parted ${PT_DISKLABEL} unit MiB print
 
 	# MBR is 512 bytes
-	truncate -s 512 ${PT_DISKLABEL}
+	truncate -s ${IMAGE_MBR_LENGTH} ${PT_DISKLABEL}
+	if [ $? != 0 ]; then
+		echo "truncate to ${IMAGE_MBR_SIZE} on ${PT_DISKLABEL} failed!"
+		exit -1
+	fi
 }
 
 function print_help()
@@ -35,6 +54,8 @@ function print_help()
 	echo "-d enable double slot copy. Default is single slot copy."
 	echo "-e enable emmc. Default is sd."
 	echo "-b soc name. Currently, imx8mm and imx6ull are supported."
+	echo "-m Only regenerate or overwrite MBR. This option can be used to generate MBR individually."
+	echo "   Suppose that we don't need to generate MBR every time. Normally we only need to generate it once."
 	echo "-h print this help."
 }
 
@@ -55,8 +76,9 @@ COPY_MODE="singlecopy"
 STORAGE_EMMC_FLAG=false
 STORAGE_DEVICE="sd"
 PT_SIZE=''
+GENERATE_MBR_ONLY_FLAG=false
 
-while getopts "o:deb:h" arg; do
+while getopts "o:deb:mh" arg; do
 	case $arg in
 		o)
 			OUTPUT_IMAGE_NAME=$OPTARG
@@ -71,6 +93,9 @@ while getopts "o:deb:h" arg; do
 			;;
 		b)
 			SOC=$OPTARG
+			;;
+		m)
+			GENERATE_MBR_ONLY_FLAG=true
 			;;
 		h)
 			print_help
@@ -114,13 +139,28 @@ if test -e ./$OUTPUT_IMAGE_NAME; then
 fi
 
 echo -n ">>>> Check MBR file..."
-if [ ! -e ${IMAGE_MBR} ]; then
-	echo -n "\nNo MBR file, will generate MBR..."
-	MBR_FILENAME=$(basename ${IMAGE_MBR})
-	MBR_FILEDIR=$(dirname ${IMAGE_MBR})
+IMAGE_MBR_SIZE=$(echo ${IMAGE_MBR} | cut -d: -f3)
+MBR_FILENAME=$(basename ${IMAGE_MBR_PATH})
+MBR_FILEDIR=$(dirname ${IMAGE_MBR_PATH})
+if [ x$GENERATE_MBR_ONLY_FLAG == xtrue ]; then
+	echo ">>>> Regenerate or overwrite MBR..."
+	if [ -e ${IMAGE_MBR_PATH} ]; then
+		echo "Delete existed MBR ${IMAGE_MBR_PATH}"
+		rm ${IMAGE_MBR_PATH}
+	fi
+	echo "Generating MBR ${IMAGE_MBR_PATH}"
 	cd $MBR_FILEDIR
-	generate_mbr_dualslot $MBR_FILENAME 7500M
+	generate_mbr_dualslot $MBR_FILENAME $IMAGE_MBR_SIZE
 	cd -
+	echo "DONE"
+	exit 0
+else
+	if [ ! -e ${IMAGE_MBR_PATH} ]; then
+		echo -n "\nNo MBR file, will generate MBR..."
+		cd $MBR_FILEDIR
+		generate_mbr_dualslot $MBR_FILENAME $IMAGE_MBR_SIZE
+		cd -
+	fi
 fi
 echo "DONE"
 
