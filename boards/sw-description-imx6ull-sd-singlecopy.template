@@ -3,7 +3,7 @@ software =
 	version = "1.0";
 	description = "Firmware update for test Project";
 	hardware-compatibility: [ "1.0", "1.2", "1.3"];
-	imx6ull9x9evk: {
+	imx6ull14x14evk: {
 		images: (
 			{
 				filename = "slotb_boot_pt_120M.mirror.gz";
@@ -40,7 +40,7 @@ software =
 			},
 			{
 				name = "bootslot";
-				value = "dualB";
+				value = "singlenormal";
 			}
 		);
 	}

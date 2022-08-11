@@ -14,7 +14,7 @@ SUPPORTED_SOC="
 imx8mm
 imx6ull
 "
-SW_DES_MANIPU_FLAG=false
+SW_DESCP_MANIPU_FLAG=false
 PT_SIZE=''
 
 function print_help()
@@ -52,7 +52,7 @@ while getopts "s:o:b:deSh" arg; do
 			SOC=$OPTARG
 			;;
 		S)
-			SW_DES_MANIPU_FLAG=true
+			SW_DESCP_MANIPU_FLAG=true
 			;;
 		h)
 			print_help
@@ -92,6 +92,13 @@ if [ -z "${OUTPUT_IMAGE_NAME}" ]; then
 	fi
 fi
 
+echo -n ">>>> Check slot_update link..."
+if test ! -d ${WRK_DIR}/slot_update; then
+	echo "ERROR: need to link slat_update to yocto image deploy directory!"
+	exit 1
+fi
+echo "DONE"
+
 # 1. Copy images to boot partition
 echo -n ">>>> Check update boot partition mirror..."
 BOOT_PT=$(echo $UPDATE_BOOT_PT | cut -d: -f1)
@@ -106,7 +113,17 @@ echo -n ">>>> Copying kernel images and dtbs to boot partition..."
 copy_images_to_boot_pt $BOOT_PT update
 echo "DONE"
 
-# 2. Truncate rootfs
+# 2. Test if all needed images exist
+echo -n ">>>> Testing update images..."
+for each_img in ${UPDATE_IMAGES}; do
+	if [ -e ${WRK_DIR}/slot_update/${each_img} ]; then
+		cp ${WRK_DIR}/slot_update/${each_img} ${WRK_DIR}/
+	fi
+	test ! -e "${WRK_DIR}/${each_img}" && echo "${WRK_DIR}/${each_img} not exists!!!" && exit -1;
+done
+echo "DONE"
+
+# 3. Truncate rootfs
 echo -n ">>>> Truncating rootfs..."
 ROOTFS_IMG=$(echo $UPDATE_ROOTFS | cut -d: -f1)
 if [ ! -e $ROOTFS_IMG ]; then
@@ -119,13 +136,6 @@ e2fsck -f $ROOTFS_IMG
 resize2fs $ROOTFS_IMG
 echo "DONE"
 
-# 3. Test if all needed images exist
-echo -n ">>>> Testing update images..."
-for each_img in ${UPDATE_IMAGES}; do
-	test ! -e "${each_img}" && echo "${each_img} not exists!!!" && exit -1;
-done
-echo "DONE"
-
 # 4. Compress update image files 
 echo -n ">>>> Compress update images..."
 for each_img in ${UPDATE_IMAGES}; do
@@ -135,8 +145,8 @@ echo "DONE"
 
 # 5. Generate sw-decription file
 echo -n ">>>> Check sw-decription file..."
-if [ x$SW_DES_MANIPU_FLAG == xtrue ]; then
-	generate_sw_desc ${WRK_DIR}/sw-description $SW_DESCRIPTION_TEMPLATE UPDATE_IMAGES
+if [ x$SW_DESCP_MANIPU_FLAG == xtrue ]; then
+	generate_sw_desc ${WRK_DIR}/sw-description $SW_DESCRIPTION_TEMPLATE $UPDATE_IMAGES
 fi
 echo "DONE"
 
@@ -169,7 +179,7 @@ for each_item in $UPDATE_IMAGES; do
 	UPDATE_FILES="$UPDATE_FILES ${each_item}.gz"
 done
 
-# 7. assemble cpio package.
+# 8. assemble cpio package.
 echo ">>>> Creating CPIO package..."
 echo $UPDATE_FILES
 for each_item in $UPDATE_FILES; do
