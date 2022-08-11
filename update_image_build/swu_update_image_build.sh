@@ -137,9 +137,11 @@ resize2fs $ROOTFS_IMG
 echo "DONE"
 
 # 4. Compress update image files 
-echo -n ">>>> Compress update images..."
+echo ">>>> Compress update images..."
 for each_img in ${UPDATE_IMAGES}; do
+	echo -n "Compressing $each_img..."
 	gzip -9kf ${each_img}
+	echo "OK"
 done
 echo "DONE"
 
