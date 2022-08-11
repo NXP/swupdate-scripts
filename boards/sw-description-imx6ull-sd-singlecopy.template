@@ -9,13 +9,13 @@ software =
 				filename = "slotb_boot_pt_120M.mirror.gz";
 				sha256 = "<slotb_boot_pt_120M.mirror.gz_sha256>";
 				compressed = "zlib";
-				device = "/dev/mmcblk1p3";
+				device = "/dev/mmcblk1p1";
 			},
 			{
 				filename = "imx-image-multimedia-imx6ull14x14evk.ext4.gz";
 				sha256 = "<imx-image-multimedia-imx6ull14x14evk.ext4.gz_sha256>";
 				compressed = "zlib";
-				device = "/dev/mmcblk1p4";
+				device = "/dev/mmcblk1p2";
 			},
 			{
 				filename = "u-boot-imx6ull14x14evk.imx.gz";
