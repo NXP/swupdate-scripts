@@ -27,6 +27,7 @@
 *.sig
 Image
 zImage
+*.imx
 
 #
 # Top-level generic files
