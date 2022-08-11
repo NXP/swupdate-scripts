@@ -115,3 +115,50 @@ function generate_sw_desc()
 	echo "DONE"
 }
 
+function generate_mbr_dualslot()
+{
+	local PT_DISKLABEL=$1
+	local PT_FILESIZE=$2
+
+	if [ -z "${PT_DISKLABEL}" ]; then
+		echo "Error: please specify an disk label for MBR!"
+		exit 1
+	fi
+
+	if [ -z "${PT_FILESIZE}" ]; then
+        echo "Error: please specify a file size for MBR!"
+        exit 1
+	fi
+
+	truncate -s ${PT_FILESIZE} ${PT_DISKLABEL}
+	if [ $? != 0 ]; then
+		echo "truncate to ${PT_FILESIZE} on ${PT_DISKLABEL} failed!"
+		exit -1
+	fi
+
+	sudo parted -s ${PT_DISKLABEL} mklabel msdos
+	if [ $? != 0 ]; then
+		echo "mklabel msdos on ${PT_DISKLABEL} failed!"
+		exit -1
+	fi
+
+	for each_item in $IMAGE_MBR_PT_STRUCT; do
+		local pt_start=$(echo $each_item | cut -d: -f2)
+		local pt_end=$(echo $each_item | cut -d: -f3)
+		local pt_fs=$(echo $each_item | cut -d: -f4)
+		sudo parted ${PT_DISKLABEL} unit MiB mkpart primary ${pt_fs} ${pt_start}  ${pt_end}
+		if [ $? != 0 ]; then
+			echo "part ${pt_fs} from ${pt_start} to ${pt_end} on ${PT_DISKLABEL} failed!"
+			exit -1
+		fi
+	done
+	sudo parted ${PT_DISKLABEL} unit MiB print
+
+	# MBR is 512 bytes
+	truncate -s ${IMAGE_MBR_LENGTH} ${PT_DISKLABEL}
+	if [ $? != 0 ]; then
+		echo "truncate to ${IMAGE_MBR_SIZE} on ${PT_DISKLABEL} failed!"
+		exit -1
+	fi
+}
+
