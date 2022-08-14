@@ -8,19 +8,16 @@ software =
 			{
 				filename = "slotb_boot_pt_120M.mirror";
 				sha256 = "<slotb_boot_pt_120M.mirror_sha256>";
-				compressed = "zlib";
 				device = "/dev/mmcblk2p3";
 			},
 			{
 				filename = "imx-image-multimedia-imx8mmevk.ext4";
 				sha256 = "<imx-image-multimedia-imx8mmevk.ext4_sha256>";
-				compressed = "zlib";
 				device = "/dev/mmcblk2p4";
 			},
 			{
 				filename = "imx-boot-imx8mmevk-sd.bin-flash_evk";
 				sha256 = "<imx-boot-imx8mmevk-sd.bin-flash_evk_sha256>";
-				compressed = "zlib";
 				device = "/dev/mmcblk2boot0";
 				offset = "33K";
 			}
@@ -29,7 +26,6 @@ software =
 			{
 				filename = "emmc_bootpart.sh";
 				sha256 = "<emmc_bootpart.sh_sha256>";
-				compressed = "zlib";
 				type = "postinstall";
 			}
 		);

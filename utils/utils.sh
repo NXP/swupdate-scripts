@@ -113,6 +113,7 @@ function generate_sw_desc()
 		if [ x${compress_flag} == xtrue ]; then
 			sed -i "s/${each_item}/${each_item}.gz/" $sw_desc_file
 			hash_filename=${each_item}.gz
+			sed -i "/<${hash_filename}_sha256>/acompressed = \"zlib\";" $sw_desc_file
 		else
 			hash_filename=${each_item}
 		fi

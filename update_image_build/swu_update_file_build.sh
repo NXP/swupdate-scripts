@@ -25,11 +25,10 @@ function print_help()
 	echo "-e enable emmc. default is sd."
 	echo "-s Specify public key file for sign image generation."
 	echo "-b soc name. Currently, imx8mm and imx6ull are supported."
-	echo "-g Compress image with gzip. Note that compressed package need to be decompressed in RAM. Make sure ram is enough to hold the image."
 	echo "-h print this help."
 }
 
-while getopts "s:o:b:degh" arg; do
+while getopts "s:o:b:deh" arg; do
 	case $arg in
 		s)
 			SIGN_PEM_FILE=$OPTARG
@@ -48,9 +47,6 @@ while getopts "s:o:b:degh" arg; do
 			;;
 		b)
 			SOC=$OPTARG
-			;;
-		g)
-			COMPRESS_FLAG=true
 			;;
 		h)
 			print_help
@@ -106,17 +102,6 @@ for each_img in ${UPDATE_IMAGES}; do
 	test ! -e "${WRK_DIR}/${each_img}" && echo "${WRK_DIR}/${each_img} not exists!!!" && exit -1;
 done
 echo "DONE"
-
-# 4. Compress update image files 
-if [ x${COMPRESS_FLAG} == xtrue ]; then
-	echo ">>>> Compress update images..."
-	for each_img in ${UPDATE_IMAGES}; do
-		echo -n "Compressing $each_img..."
-		gzip -9kf ${each_img}
-		echo "OK"
-	done
-	echo "DONE"
-fi
 
 # 5. Generate sw-decription file
 echo -n ">>>> Check sw-decription file..."
