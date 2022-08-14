@@ -4,7 +4,7 @@ software =
 	description = "Firmware update for test Project";
 	hardware-compatibility: [ "1.0", "1.2", "1.3"];
 	imx8mmevk: {
-		images: (
+		files: (
 			{
                 filename = "Image";
                 path="/Image"

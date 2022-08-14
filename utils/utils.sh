@@ -111,6 +111,7 @@ function generate_sw_desc()
 	cp $template_file $sw_desc_file
 	for each_item in $image_list; do
 		if [ x${compress_flag} == xtrue ]; then
+			sed -i "s/${each_item}/${each_item}.gz/" $sw_desc_file
 			hash_filename=${each_item}.gz
 		else
 			hash_filename=${each_item}
