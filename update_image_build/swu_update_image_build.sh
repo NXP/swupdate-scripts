@@ -78,7 +78,7 @@ else
 	fi
 fi
 
-SOC_ASSEMBLE_SETTING_FILE="cfg_${SOC}_update_full.cfg"
+SOC_ASSEMBLE_SETTING_FILE="cfg_${SOC}_update_image.cfg"
 source ${WRK_DIR}/../boards/${SOC_ASSEMBLE_SETTING_FILE}
 source ${WRK_DIR}/../utils/utils.sh
 

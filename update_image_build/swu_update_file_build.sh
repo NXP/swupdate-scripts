@@ -25,9 +25,6 @@ function print_help()
 	echo "-e enable emmc. default is sd."
 	echo "-s Specify public key file for sign image generation."
 	echo "-b soc name. Currently, imx8mm and imx6ull are supported."
-	echo "-S Generate software description file."
-	echo "   This will use a template to generate software description file."
-	echo "   User can also create their own template file."
 	echo "-g Compress image with gzip. Note that compressed package need to be decompressed in RAM. Make sure ram is enough to hold the image."
 	echo "-h print this help."
 }
@@ -81,7 +78,7 @@ else
 	fi
 fi
 
-SOC_ASSEMBLE_SETTING_FILE="cfg_${SOC}_update_simple.cfg"
+SOC_ASSEMBLE_SETTING_FILE="cfg_${SOC}_update_file.cfg"
 source ${WRK_DIR}/../boards/${SOC_ASSEMBLE_SETTING_FILE}
 source ${WRK_DIR}/../utils/utils.sh
 
