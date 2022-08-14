@@ -1,0 +1,34 @@
+software =
+{
+	version = "1.0";
+	description = "Firmware update for test Project";
+	hardware-compatibility: [ "1.0", "1.2", "1.3"];
+	imx6ull14x14evk: {
+		files: (
+			{
+				filename = "zImage";
+				path="/zImage"
+				sha256 = "<zImage_sha256>";
+				device = "/dev/mmcblk1p1";
+				filesystem = "vfat";
+			},
+			{
+				filename = "imx6ull-14x14-evk.dtb";
+				path="/imx6ull-14x14-evk.dtb"
+				sha256 = "<imx6ull-14x14-evk.dtb_sha256>";
+				device = "/dev/mmcblk1p1";
+				filesystem = "vfat";
+			}
+		);
+		bootenv: (
+			{
+				name = "upgrade_available";
+				value = "1";
+			},
+			{
+				name = "bootslot";
+				value = "singlenormal";
+			}
+		);
+	}
+}

@@ -14,8 +14,8 @@ SUPPORTED_SOC="
 imx8mm
 imx6ull
 "
-SW_DESCP_MANIPU_FLAG=false
 PT_SIZE=''
+COMPRESS_FLAG=false
 
 function print_help()
 {
@@ -25,13 +25,11 @@ function print_help()
 	echo "-e enable emmc. default is sd."
 	echo "-s Specify public key file for sign image generation."
 	echo "-b soc name. Currently, imx8mm and imx6ull are supported."
-	echo "-S Generate software description file."
-	echo "   This will use a template to generate software description file."
-	echo "   User can also create their own template file."
+	echo "-g Compress image with gzip. Note that compressed package need to be decompressed in RAM. Make sure ram is enough to hold the image."
 	echo "-h print this help."
 }
 
-while getopts "s:o:b:deSh" arg; do
+while getopts "s:o:b:degh" arg; do
 	case $arg in
 		s)
 			SIGN_PEM_FILE=$OPTARG
@@ -51,8 +49,8 @@ while getopts "s:o:b:deSh" arg; do
 		b)
 			SOC=$OPTARG
 			;;
-		S)
-			SW_DESCP_MANIPU_FLAG=true
+		g)
+			COMPRESS_FLAG=true
 			;;
 		h)
 			print_help
@@ -80,15 +78,15 @@ else
 	fi
 fi
 
-SOC_ASSEMBLE_SETTING_FILE="cfg_${SOC}.cfg"
+SOC_ASSEMBLE_SETTING_FILE="cfg_${SOC}_update_full.cfg"
 source ${WRK_DIR}/../boards/${SOC_ASSEMBLE_SETTING_FILE}
 source ${WRK_DIR}/../utils/utils.sh
 
 if [ -z "${OUTPUT_IMAGE_NAME}" ]; then
 	if [ x"$SIGN_FLAG" == x"true" ]; then
-		OUTPUT_IMAGE_NAME=${SOC_NAME}_${UPDATE_CONTAINER_VER}_slot${SLOT}_${UPDATE_BSP_VER}_${COPY_MODE}_${STORAGE_DEVICE}_${CUR_DATE}_sign.swu
+		OUTPUT_IMAGE_NAME=${SOC_NAME}_${UPDATE_CONTAINER_VER}_${UPDATE_BSP_VER}_${COPY_MODE}_${STORAGE_DEVICE}_full_${CUR_DATE}_sign.swu
 	else
-		OUTPUT_IMAGE_NAME=${SOC_NAME}_${UPDATE_CONTAINER_VER}_slot${SLOT}_${UPDATE_BSP_VER}_${COPY_MODE}_${STORAGE_DEVICE}_${CUR_DATE}_nosign.swu
+		OUTPUT_IMAGE_NAME=${SOC_NAME}_${UPDATE_CONTAINER_VER}_${UPDATE_BSP_VER}_${COPY_MODE}_${STORAGE_DEVICE}_full_${CUR_DATE}_nosign.swu
 	fi
 fi
 
@@ -137,19 +135,19 @@ resize2fs $ROOTFS_IMG
 echo "DONE"
 
 # 4. Compress update image files 
-echo ">>>> Compress update images..."
-for each_img in ${UPDATE_IMAGES}; do
-	echo -n "Compressing $each_img..."
-	gzip -9kf ${each_img}
-	echo "OK"
-done
-echo "DONE"
+if [ x${COMPRESS_FLAG} == xtrue ]; then
+	echo ">>>> Compress update images..."
+	for each_img in ${UPDATE_IMAGES}; do
+		echo -n "Compressing $each_img..."
+		gzip -9kf ${each_img}
+		echo "OK"
+	done
+	echo "DONE"
+fi
 
 # 5. Generate sw-decription file
 echo -n ">>>> Check sw-decription file..."
-if [ x$SW_DESCP_MANIPU_FLAG == xtrue ]; then
-	generate_sw_desc ${WRK_DIR}/sw-description $SW_DESCRIPTION_TEMPLATE $UPDATE_IMAGES
-fi
+generate_sw_desc ${WRK_DIR}/sw-description $SW_DESCRIPTION_TEMPLATE ${COMPRESS_FLAG} $UPDATE_IMAGES
 echo "DONE"
 
 # 6. Check if need to sign image
@@ -178,7 +176,11 @@ else
 fi
 
 for each_item in $UPDATE_IMAGES; do
-	UPDATE_FILES="$UPDATE_FILES ${each_item}.gz"
+	if [ x${COMPRESS_FLAG} == xtrue ]; then
+		UPDATE_FILES="$UPDATE_FILES ${each_item}.gz"
+	else
+		UPDATE_FILES="$UPDATE_FILES ${each_item}"
+	fi
 done
 
 # 8. assemble cpio package.

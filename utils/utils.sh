@@ -99,6 +99,8 @@ function generate_sw_desc()
 	shift
 	local template_file=$1
 	shift
+	local compress_flag=$1
+	shift
 	local image_list=$@
 
 	echo "software desc file: $sw_desc_file"
@@ -108,9 +110,15 @@ function generate_sw_desc()
 	echo "Generating software description file..."
 	cp $template_file $sw_desc_file
 	for each_item in $image_list; do
-		sha256sum ${WRK_DIR}/${each_item}.gz
-		sha256_sum=$(sha256sum ${WRK_DIR}/${each_item}.gz | cut -d' ' -f1)
-		sed -i "s/<${each_item}.gz_sha256>/${sha256_sum}/" $sw_desc_file
+		if [ x${compress_flag} == xtrue ]; then
+			hash_filename=${each_item}.gz
+		else
+			hash_filename=${each_item}
+		fi
+		hash_str=$(sha256sum ${WRK_DIR}/${hash_filename})
+		echo $hash_str
+		sha256_sum=$(echo $hash_str | cut -d' ' -f1)
+		sed -i "s/<${hash_filename}_sha256>/${sha256_sum}/" $sw_desc_file
 	done
 	echo "DONE"
 }
