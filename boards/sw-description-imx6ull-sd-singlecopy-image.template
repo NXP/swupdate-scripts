@@ -9,17 +9,20 @@ software =
 				filename = "slotb_boot_pt_120M.mirror";
 				sha256 = "<slotb_boot_pt_120M.mirror_sha256>";
 				device = "/dev/mmcblk1p1";
+				installed-directly = true;
 			},
 			{
 				filename = "core-image-base-imx6ull14x14evk.ext4";
 				sha256 = "<core-image-base-imx6ull14x14evk.ext4_sha256>";
 				device = "/dev/mmcblk1p2";
+				installed-directly = true;
 			},
 			{
 				filename = "u-boot-imx6ull14x14evk.imx";
 				sha256 = "<u-boot-imx6ull14x14evk.imx_sha256>";
 				device = "/dev/mmcblk1";
 				offset = "1K";
+				installed-directly = true;
 			}
 		);
 		bootenv: (
