@@ -125,10 +125,11 @@ function generate_sw_desc()
 	echo "DONE"
 }
 
-function generate_mbr_dualslot()
+function generate_pt_tbl_dualslot()
 {
 	local PT_DISKLABEL=$1
 	local PT_FILESIZE=$2
+	local PT_FMT=$3
 
 	if [ -z "${PT_DISKLABEL}" ]; then
 		echo "Error: please specify an disk label for MBR!"
@@ -146,29 +147,67 @@ function generate_mbr_dualslot()
 		exit -1
 	fi
 
-	sudo parted -s ${PT_DISKLABEL} mklabel msdos
-	if [ $? != 0 ]; then
-		echo "mklabel msdos on ${PT_DISKLABEL} failed!"
-		exit -1
-	fi
-
-	for each_item in $IMAGE_MBR_PT_STRUCT; do
-		local pt_start=$(echo $each_item | cut -d: -f2)
-		local pt_end=$(echo $each_item | cut -d: -f3)
-		local pt_fs=$(echo $each_item | cut -d: -f4)
-		sudo parted ${PT_DISKLABEL} unit MiB mkpart primary ${pt_fs} ${pt_start}  ${pt_end}
+	for each_item in $IMAGE_PT_TBL_STRUCT; do
+		local pt_index=$(echo $each_item | cut -d: -f1)
+		local pt_name=$(echo $each_item | cut -d: -f2)
+		local pt_start=$(echo $each_item | cut -d: -f3)
+		local pt_end=$(echo $each_item | cut -d: -f4)
+		local pt_fs=$(echo $each_item | cut -d: -f5)
+		case $PT_FMT in
+			MBR)
+				sudo parted ${PT_DISKLABEL} unit MiB mkpart primary ${pt_fs} ${pt_start} ${pt_end}
+				;;
+			GPT)
+				sudo sgdisk -a 8 -n ${pt_index}:${pt_start}:${pt_end} -t ${pt_index}:${pt_fs} -c ${pt_index}:${pt_name} -e ${PT_DISKLABEL}
+				;;
+			?)
+				echo "Invalid partition type!"
+				exit -1
+				;;
+		esac
 		if [ $? != 0 ]; then
-			echo "part ${pt_fs} from ${pt_start} to ${pt_end} on ${PT_DISKLABEL} failed!"
+			echo "Make partition ${pt_fs} from ${pt_start} to ${pt_end} on ${PT_DISKLABEL} failed!"
 			exit -1
 		fi
 	done
-	sudo parted ${PT_DISKLABEL} unit MiB print
 
-	# MBR is 512 bytes
-	truncate -s ${IMAGE_MBR_LENGTH} ${PT_DISKLABEL}
+	case $PT_FMT in
+		MBR)
+			sudo parted ${PT_DISKLABEL} unit MiB print
+			;;
+		GPT)
+			sudo sgdisk -p -e ${PT_DISKLABEL}
+			;;
+		?)
+			echo "Invalid partition type!"
+			exit -1
+			;;
+	esac
+
+	truncate -s ${IMAGE_PT_TBL_LENGTH} ${PT_DISKLABEL}
 	if [ $? != 0 ]; then
-		echo "truncate to ${IMAGE_MBR_SIZE} on ${PT_DISKLABEL} failed!"
+		echo "truncate to ${IMAGE_PT_TBL_SIZE} on ${PT_DISKLABEL} failed!"
 		exit -1
 	fi
 }
 
+function check_valid_boards()
+{
+	local soc_name=$1
+
+	if [ -z "${soc_name}" ]; then
+		echo "No SOC specified!"
+		exit 1
+	else
+		VALID_SOC_FLAG=false
+		for each_item in $SUPPORTED_SOC; do
+			if [ x${each_item} == x${SOC} ]; then
+				VALID_SOC_FLAG=true
+			fi
+		done
+		if [ x${VALID_SOC_FLAG} == x"${false}" ]; then
+			echo "Not supported SoC: ${SOC}"
+			exit -1
+		fi
+	fi
+}
