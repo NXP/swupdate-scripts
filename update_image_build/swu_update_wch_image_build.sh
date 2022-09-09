@@ -18,11 +18,12 @@ function print_help()
 	echo "-d enable double slot copy. default is single slot copy."
 	echo "-e enable emmc. default is sd."
 	echo "-s Specify public key file for sign image generation."
-	echo "-b soc name. Currently, imx8mm and imx6ull are supported."
+	echo "-b soc name. Currently, imx8mm, imx6ull or imx6ullwch are supported."
+	echo "-g Compress image with gzip. Note that compressed package need to be decompressed in RAM. Make sure ram is enough to hold the image."
 	echo "-h print this help."
 }
 
-while getopts "s:o:b:deh" arg; do
+while getopts "s:o:b:degh" arg; do
 	case $arg in
 		s)
 			SIGN_PEM_FILE=$OPTARG
@@ -42,6 +43,9 @@ while getopts "s:o:b:deh" arg; do
 		b)
 			SOC=$OPTARG
 			;;
+		g)
+			COMPRESS_FLAG=true
+			;;
 		h)
 			print_help
 			exit 0
@@ -58,14 +62,14 @@ source ${WRK_DIR}/../boards/cfg_boards.cfg
 
 check_valid_boards $SOC
 
-SOC_ASSEMBLE_SETTING_FILE="cfg_${SOC}_update_file.cfg"
+SOC_ASSEMBLE_SETTING_FILE="cfg_${SOC}_update_image.cfg"
 source ${WRK_DIR}/../boards/${SOC_ASSEMBLE_SETTING_FILE}
 
-if [ -z "${OUTPUT_IMAGE_NAME}" ]; then
+if [[ -z "${OUTPUT_IMAGE_NAME}" ]]; then
 	if [ x"$SIGN_FLAG" == x"true" ]; then
-		OUTPUT_IMAGE_NAME=${SOC_NAME}_${UPDATE_CONTAINER_VER}_${UPDATE_BSP_VER}_${COPY_MODE}_${STORAGE_DEVICE}_file_${CUR_DATE}_sign.swu
+		OUTPUT_IMAGE_NAME=${SOC_NAME}_${UPDATE_CONTAINER_VER}_${UPDATE_BSP_VER}_${COPY_MODE}_${STORAGE_DEVICE}_image_${CUR_DATE}_sign.swu
 	else
-		OUTPUT_IMAGE_NAME=${SOC_NAME}_${UPDATE_CONTAINER_VER}_${UPDATE_BSP_VER}_${COPY_MODE}_${STORAGE_DEVICE}_file_${CUR_DATE}_nosign.swu
+		OUTPUT_IMAGE_NAME=${SOC_NAME}_${UPDATE_CONTAINER_VER}_${UPDATE_BSP_VER}_${COPY_MODE}_${STORAGE_DEVICE}_image_${CUR_DATE}_nosign.swu
 	fi
 fi
 
@@ -78,17 +82,46 @@ echo "DONE"
 
 # 2. Test if all needed images exist
 echo -n ">>>> Testing update images..."
+UPDATE_IMAGE_FILES=""
 for each_img in ${UPDATE_IMAGES}; do
-	if [ -e ${WRK_DIR}/slot_update/${each_img} ]; then
-		cp ${WRK_DIR}/slot_update/${each_img} ${WRK_DIR}/
+	img_name=$(echo $each_img | cut -d: -f1)
+	img_truncate_size=$(echo $each_img | cut -d: -f2)
+	if [ -e ${WRK_DIR}/slot_update/${img_name} ]; then
+		cp ${WRK_DIR}/slot_update/${img_name} ${WRK_DIR}/
+		echo "Truncating ${WRK_DIR}/${img_name} to $img_truncate_size"
+		truncate -s $img_truncate_size ${WRK_DIR}/${img_name}
 	fi
-	test ! -e "${WRK_DIR}/${each_img}" && echo "${WRK_DIR}/${each_img} not exists!!!" && exit -1;
+	UPDATE_IMAGE_FILES="${img_name} ${UPDATE_IMAGE_FILES}"
+	test ! -e "${WRK_DIR}/${img_name}" && echo "${WRK_DIR}/${img_name} not exists!!!" && exit -1;
 done
 echo "DONE"
 
+# 3. Postscripts
+echo -n ">>>> Check post scripts..."
+if [[ -z "${POST_SCRIPTS}" ]]; then
+	echo "No post scripts to handle, ignored!"
+else
+	for each_item in ${POST_SCRIPTS}; do
+		UPDATE_IMAGE_FILES="${each_item} ${UPDATE_IMAGE_FILES}"
+	done
+fi
+echo "DONE"
+
+# 4. Compress update image files 
+if [ x${COMPRESS_FLAG} == xtrue ]; then
+	echo ">>>> Compress update images..."
+	for each_img in ${UPDATE_IMAGE_FILES}; do
+		img_name=$(echo $each_img | cut -d: -f1)
+		echo -n "Compressing $img_name..."
+		gzip -9kf ${img_name}
+		echo "OK"
+	done
+	echo "DONE"
+fi
+
 # 5. Generate sw-decription file
 echo -n ">>>> Check sw-decription file..."
-generate_sw_desc ${WRK_DIR}/sw-description $SW_DESCRIPTION_TEMPLATE ${COMPRESS_FLAG} $UPDATE_IMAGES
+generate_sw_desc ${WRK_DIR}/sw-description ${SW_DESCRIPTION_TEMPLATE} ${COMPRESS_FLAG} ${UPDATE_IMAGE_FILES}
 echo "DONE"
 
 # 6. Check if need to sign image
@@ -96,7 +129,7 @@ echo -n ">>>> Check if need a sign image..."
 UPDATE_FILES="sw-description"
 if [ x"$SIGN_FLAG" == x"true" ]; then
 	echo "YES"
-	if [ -z "${SIGN_PEM_FILE}" ]; then
+	if [[ -z "${SIGN_PEM_FILE}" ]]; then
 		echo "Error: please specify a pem file!"
 		exit 1
 	fi
@@ -116,7 +149,7 @@ else
 	echo "NO"
 fi
 
-for each_item in $UPDATE_IMAGES; do
+for each_item in $UPDATE_IMAGE_FILES; do
 	if [ x${COMPRESS_FLAG} == xtrue ]; then
 		UPDATE_FILES="$UPDATE_FILES ${each_item}.gz"
 	else

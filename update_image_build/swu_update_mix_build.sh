@@ -19,10 +19,11 @@ function print_help()
 	echo "-e enable emmc. default is sd."
 	echo "-s Specify public key file for sign image generation."
 	echo "-b soc name. Currently, imx8mm and imx6ull are supported."
+	echo "-g Compress image with gzip. Note that compressed package need to be decompressed in RAM. Make sure ram is enough to hold the image."
 	echo "-h print this help."
 }
 
-while getopts "s:o:b:deh" arg; do
+while getopts "s:o:b:degh" arg; do
 	case $arg in
 		s)
 			SIGN_PEM_FILE=$OPTARG
@@ -42,6 +43,9 @@ while getopts "s:o:b:deh" arg; do
 		b)
 			SOC=$OPTARG
 			;;
+		g)
+			COMPRESS_FLAG=true
+			;;
 		h)
 			print_help
 			exit 0
@@ -58,14 +62,14 @@ source ${WRK_DIR}/../boards/cfg_boards.cfg
 
 check_valid_boards $SOC
 
-SOC_ASSEMBLE_SETTING_FILE="cfg_${SOC}_update_file.cfg"
+SOC_ASSEMBLE_SETTING_FILE="cfg_${SOC}_update_image.cfg"
 source ${WRK_DIR}/../boards/${SOC_ASSEMBLE_SETTING_FILE}
 
 if [ -z "${OUTPUT_IMAGE_NAME}" ]; then
 	if [ x"$SIGN_FLAG" == x"true" ]; then
-		OUTPUT_IMAGE_NAME=${SOC_NAME}_${UPDATE_CONTAINER_VER}_${UPDATE_BSP_VER}_${COPY_MODE}_${STORAGE_DEVICE}_file_${CUR_DATE}_sign.swu
+		OUTPUT_IMAGE_NAME=${SOC_NAME}_${UPDATE_CONTAINER_VER}_${UPDATE_BSP_VER}_${COPY_MODE}_${STORAGE_DEVICE}_image_${CUR_DATE}_sign.swu
 	else
-		OUTPUT_IMAGE_NAME=${SOC_NAME}_${UPDATE_CONTAINER_VER}_${UPDATE_BSP_VER}_${COPY_MODE}_${STORAGE_DEVICE}_file_${CUR_DATE}_nosign.swu
+		OUTPUT_IMAGE_NAME=${SOC_NAME}_${UPDATE_CONTAINER_VER}_${UPDATE_BSP_VER}_${COPY_MODE}_${STORAGE_DEVICE}_image_${CUR_DATE}_nosign.swu
 	fi
 fi
 
@@ -74,6 +78,20 @@ if test ! -d ${WRK_DIR}/slot_update; then
 	echo "ERROR: need to link slot_update to yocto image deploy directory!"
 	exit 1
 fi
+echo "DONE"
+
+# 1. Copy images to boot partition
+echo -n ">>>> Check update boot partition mirror..."
+BOOT_PT=$(echo $UPDATE_BOOT_PT | cut -d: -f1)
+if [ ! -e ${BOOT_PT} ]; then
+	echo -n "\nNo update boot partition mirror, generate..."
+	calculate_pt_size $UPDATE_BOOT_PT PT_SIZE
+	truncate -s ${PT_SIZE} ${BOOT_PT}
+fi
+echo "DONE"
+
+echo -n ">>>> Copying kernel images and dtbs to boot partition..."
+copy_images_to_boot_pt $BOOT_PT update
 echo "DONE"
 
 # 2. Test if all needed images exist
@@ -85,6 +103,30 @@ for each_img in ${UPDATE_IMAGES}; do
 	test ! -e "${WRK_DIR}/${each_img}" && echo "${WRK_DIR}/${each_img} not exists!!!" && exit -1;
 done
 echo "DONE"
+
+# 3. Truncate rootfs
+echo -n ">>>> Truncating rootfs..."
+ROOTFS_IMG=$(echo $UPDATE_ROOTFS | cut -d: -f1)
+if [ ! -e $ROOTFS_IMG ]; then
+	echo "ROOTFS image not found!"
+	exit -1
+fi
+calculate_pt_size $UPDATE_ROOTFS PT_SIZE
+truncate -s $PT_SIZE $ROOTFS_IMG
+e2fsck -f $ROOTFS_IMG
+resize2fs $ROOTFS_IMG
+echo "DONE"
+
+# 4. Compress update image files 
+if [ x${COMPRESS_FLAG} == xtrue ]; then
+	echo ">>>> Compress update images..."
+	for each_img in ${UPDATE_IMAGES}; do
+		echo -n "Compressing $each_img..."
+		gzip -9kf ${each_img}
+		echo "OK"
+	done
+	echo "DONE"
+fi
 
 # 5. Generate sw-decription file
 echo -n ">>>> Check sw-decription file..."

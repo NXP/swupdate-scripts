@@ -61,7 +61,7 @@ check_valid_boards $SOC
 SOC_ASSEMBLE_SETTING_FILE="cfg_${SOC}_base.cfg"
 source ${WRK_DIR}/../boards/${SOC_ASSEMBLE_SETTING_FILE}
 
-if [ -z "${OUTPUT_IMAGE_NAME}" ]; then
+if [[ -z "${OUTPUT_IMAGE_NAME}" ]]; then
 	echo "No output image name specified! Use default name!"
 	OUTPUT_IMAGE_NAME=swu_${COPY_MODE}_rescue_${SOC_NAME}_${STORAGE_DEVICE}_${CUR_DATE}.sdcard
 fi
@@ -100,7 +100,7 @@ echo "DONE"
 
 echo -n ">>>> Check slota boot partition mirror..."
 BOOT_PT=$(echo $SLOTA_BOOT_PT | cut -d: -f1)
-if [ -z ${BOOT_PT} ]; then
+if [[ -z ${BOOT_PT} ]]; then
 	echo "No slotA boot part, ignored!"
 else
 	if [ ! -e ${BOOT_PT} ]; then
@@ -116,7 +116,7 @@ echo "DONE"
 
 echo -n ">>>> Check slotb boot partition mirror..."
 BOOT_PT=$(echo $SLOTB_BOOT_PT | cut -d: -f1)
-if [ -z ${BOOT_PT} ]; then
+if [[ -z ${BOOT_PT} ]]; then
 	echo "No slotB boot part, ignored!"
 else
 	if [ ! -e ${BOOT_PT} ]; then
@@ -147,7 +147,7 @@ touch $OUTPUT_IMAGE_NAME
 
 # 1. assemble header
 echo ">>>> Making header..."
-if [ -z $IMAGES_HEADER ]; then
+if [[ -z $IMAGES_HEADER ]]; then
 	echo "NULL header, ignored!"
 else
 	for each_item in $IMAGES_HEADER; do
@@ -168,7 +168,7 @@ echo "DONE"
 
 # 2. assemble swupdate
 echo ">>>> Making swupdate..."
-if [ -z $IMAGES_SWUPDATE ]; then
+if [[ -z $IMAGES_SWUPDATE ]]; then
 	echo "NULL swupdate ramdisk images, Ignored!"
 else
 	for each_item in $IMAGES_SWUPDATE; do
@@ -189,13 +189,13 @@ echo "DONE"
 
 # 3. assemble slota
 echo ">>>> Making slota..."
-if [ -z $SLOTA_BOOT_PT_FILES ]; then
+if [[ -z $SLOTA_BOOT_PT_FILES ]]; then
 	echo "No slotA files to copy to boot part, ignored!"
 else
 	BOOT_PT_PATH=$(echo $SLOTA_BOOT_PT | cut -d: -f1)
 	copy_images_to_boot_pt $BOOT_PT_PATH slota
 fi
-if [ -z $SLOTA_ROOTFS ]; then
+if [[ -z $SLOTA_ROOTFS ]]; then
 	echo "No slotA rootfs, ignored!"
 else
 	ROOTFS_IMG=$(echo $SLOTA_ROOTFS | cut -d: -f1)
@@ -217,13 +217,13 @@ echo "DONE"
 # 4. assemble slotb
 if [ x$DOUBLESLOT_FLAG == x"true" ]; then
 	echo ">>>> Making slotb..."
-	if [ -z $SLOTA_BOOT_PT_FILES ]; then
+	if [[ -z $SLOTA_BOOT_PT_FILES ]]; then
 		echo "No slotB files to copy to boot part, ignored!"
 	else
 		BOOT_PT_PATH=$(echo $SLOTB_BOOT_PT | cut -d: -f1)
 		copy_images_to_boot_pt $BOOT_PT_PATH slotb
 	fi
-	if [ -z $SLOTB_ROOTFS ]; then
+	if [[ -z $SLOTB_ROOTFS ]]; then
 		echo "No slotB rootfs, ignored!"
 	else
 		ROOTFS_IMG=$(echo $SLOTB_ROOTFS | cut -d: -f1)
@@ -245,7 +245,7 @@ fi
 
 # 5. Check image map
 echo "Checking partition image ..."
-if [ -z $IMAGE_PT_TBL_IMAGES ]; then
+if [[ -z $IMAGE_PT_TBL_IMAGES ]]; then
 	echo "No extra image map found, ignored!"
 else
 	echo "Find partition images, will program these images to disk partitions!"
@@ -257,7 +257,7 @@ else
 			echo "Can't find $pt_image_path to dd!"
 			exit -1
 		fi
-		if [ -z $pt_image_offset ]; then
+		if [[ -z $pt_image_offset ]]; then
 			echo "Offset not found for $pt_image_path!"
 			exit -1
 		fi
@@ -282,7 +282,7 @@ echo "DONE"
 # 6. Check image tail for GPT
 echo "Checking image tail for GPT..."
 if [ x$IMAGE_PT_TBL_FMT == x"GPT" ]; then
-	if [ -z $IMAGES_TAIL ]; then
+	if [[ -z $IMAGES_TAIL ]]; then
 		echo "Error: no image tail found!"
 		exit -1
 	else

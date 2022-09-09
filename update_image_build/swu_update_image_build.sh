@@ -3,17 +3,11 @@
 SIGN_PEM_FILE=""
 SIGN_FLAG=false
 WRK_DIR="$(pwd)"
-#CUR_DATE="$(date "+%Y%m%d-%H%M%S")"
-CUR_DATE="$(date "+%Y%m%d")"
 OUTPUT_IMAGE_NAME=""
 DOUBLESLOT_FLAG=false
 COPY_MODE="singlecopy"
 STORAGE_EMMC_FLAG=false
 STORAGE_DEVICE="sd"
-SUPPORTED_SOC="
-imx8mm
-imx6ull
-"
 PT_SIZE=''
 COMPRESS_FLAG=false
 
@@ -63,24 +57,13 @@ while getopts "s:o:b:degh" arg; do
 	esac
 done
 
-if [ -z "${SOC}" ]; then
-	echo "No SOC specified!"
-	exit 1
-else
-	VALID_SOC_FLAG=false
-	for each_item in $SUPPORTED_SOC; do
-		if [ x${each_item} == x${SOC} ]; then
-			VALID_SOC_FLAG=true
-		fi
-	done
-	if [ x${VALID_SOC_FLAG} == x"${false}" ]; then
-		echo "Not supported SoC: ${SOC}"
-	fi
-fi
+source ${WRK_DIR}/../utils/utils.sh
+source ${WRK_DIR}/../boards/cfg_boards.cfg
+
+check_valid_boards $SOC
 
 SOC_ASSEMBLE_SETTING_FILE="cfg_${SOC}_update_image.cfg"
 source ${WRK_DIR}/../boards/${SOC_ASSEMBLE_SETTING_FILE}
-source ${WRK_DIR}/../utils/utils.sh
 
 if [ -z "${OUTPUT_IMAGE_NAME}" ]; then
 	if [ x"$SIGN_FLAG" == x"true" ]; then
@@ -92,54 +75,34 @@ fi
 
 echo -n ">>>> Check slot_update link..."
 if test ! -d ${WRK_DIR}/slot_update; then
-	echo "ERROR: need to link slat_update to yocto image deploy directory!"
+	echo "ERROR: need to link slot_update to yocto image deploy directory!"
 	exit 1
 fi
 echo "DONE"
 
-# 1. Copy images to boot partition
-echo -n ">>>> Check update boot partition mirror..."
-BOOT_PT=$(echo $UPDATE_BOOT_PT | cut -d: -f1)
-if [ ! -e ${BOOT_PT} ]; then
-	echo -n "\nNo update boot partition mirror, generate..."
-	calculate_pt_size $UPDATE_BOOT_PT PT_SIZE
-	truncate -s ${PT_SIZE} ${BOOT_PT}
-fi
-echo "DONE"
-
-echo -n ">>>> Copying kernel images and dtbs to boot partition..."
-copy_images_to_boot_pt $BOOT_PT update
-echo "DONE"
-
 # 2. Test if all needed images exist
 echo -n ">>>> Testing update images..."
+UPDATE_IMAGE_FILES=""
 for each_img in ${UPDATE_IMAGES}; do
-	if [ -e ${WRK_DIR}/slot_update/${each_img} ]; then
-		cp ${WRK_DIR}/slot_update/${each_img} ${WRK_DIR}/
+	img_name=$(echo $each_img | cut -d: -f1)
+	img_truncate_size=$(echo $each_img | cut -d: -f2)
+	if [ -e ${WRK_DIR}/slot_update/${img_name} ]; then
+		cp ${WRK_DIR}/slot_update/${img_name} ${WRK_DIR}/
+		echo "Truncating ${WRK_DIR}/${img_name} to $img_truncate_size"
+		truncate -s $img_truncate_size ${WRK_DIR}/${img_name}
 	fi
-	test ! -e "${WRK_DIR}/${each_img}" && echo "${WRK_DIR}/${each_img} not exists!!!" && exit -1;
+	UPDATE_IMAGE_FILES="${img_name} ${UPDATE_IMAGE_FILES}"
+	test ! -e "${WRK_DIR}/${img_name}" && echo "${WRK_DIR}/${img_name} not exists!!!" && exit -1;
 done
-echo "DONE"
-
-# 3. Truncate rootfs
-echo -n ">>>> Truncating rootfs..."
-ROOTFS_IMG=$(echo $UPDATE_ROOTFS | cut -d: -f1)
-if [ ! -e $ROOTFS_IMG ]; then
-	echo "ROOTFS image not found!"
-	exit -1
-fi
-calculate_pt_size $UPDATE_ROOTFS PT_SIZE
-truncate -s $PT_SIZE $ROOTFS_IMG
-e2fsck -f $ROOTFS_IMG
-resize2fs $ROOTFS_IMG
 echo "DONE"
 
 # 4. Compress update image files 
 if [ x${COMPRESS_FLAG} == xtrue ]; then
 	echo ">>>> Compress update images..."
 	for each_img in ${UPDATE_IMAGES}; do
-		echo -n "Compressing $each_img..."
-		gzip -9kf ${each_img}
+		img_name=$(echo $each_img | cut -d: -f1)
+		echo -n "Compressing $img_name..."
+		gzip -9kf ${img_name}
 		echo "OK"
 	done
 	echo "DONE"
@@ -147,7 +110,7 @@ fi
 
 # 5. Generate sw-decription file
 echo -n ">>>> Check sw-decription file..."
-generate_sw_desc ${WRK_DIR}/sw-description $SW_DESCRIPTION_TEMPLATE ${COMPRESS_FLAG} $UPDATE_IMAGES
+generate_sw_desc ${WRK_DIR}/sw-description ${SW_DESCRIPTION_TEMPLATE} ${COMPRESS_FLAG} ${UPDATE_IMAGE_FILES}
 echo "DONE"
 
 # 6. Check if need to sign image
@@ -175,7 +138,7 @@ else
 	echo "NO"
 fi
 
-for each_item in $UPDATE_IMAGES; do
+for each_item in $UPDATE_IMAGE_FILES; do
 	if [ x${COMPRESS_FLAG} == xtrue ]; then
 		UPDATE_FILES="$UPDATE_FILES ${each_item}.gz"
 	else
