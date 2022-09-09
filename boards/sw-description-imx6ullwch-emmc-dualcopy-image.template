@@ -6,23 +6,11 @@ software =
 	imx6ull14x14evk: {
 		images: (
 			{
-				filename = "ddr_cfg_samsung_iot_hub.imx.mbpA";
-				sha256 = "<ddr_cfg_samsung_iot_hub.imx.mbpA_sha256>";
-				device = "/dev/mmcblk1p1";
-				installed-directly = true;
-			},
-			{
 				filename = "ddr_cfg_samsung_iot_hub.imx.mbpB";
 				sha256 = "<ddr_cfg_samsung_iot_hub.imx.mbpB_sha256>";
 				device = "/dev/mmcblk1p2";
 				installed-directly = true;
 			},
-			{
-				filename = "lk.imxA";
-				sha256 = "<lk.imxA_sha256>";
-				device = "/dev/mmcblk1p3";
-				installed-directly = true;
-			}
 			{
 				filename = "lk.imxB";
 				sha256 = "<lk.imxB_sha256>";
@@ -30,33 +18,15 @@ software =
 				installed-directly = true;
 			}
 			{
-				filename = "zImageA";
-				sha256 = "<zImageA_sha256>";
-				device = "/dev/mmcblk1p5";
-				installed-directly = true;
-			},
-			{
 				filename = "zImageB";
 				sha256 = "<zImageB_sha256>";
 				device = "/dev/mmcblk1p6";
 				installed-directly = true;
 			},
 			{
-				filename = "imx6ull-14x14-evk-emmc.dtb.mbpA";
-				sha256 = "<imx6ull-14x14-evk-emmc.dtb.mbpA_sha256>";
-				device = "/dev/mmcblk1p7";
-				installed-directly = true;
-			}
-			{
 				filename = "imx6ull-14x14-evk-emmc.dtb.mbpB";
 				sha256 = "<imx6ull-14x14-evk-emmc.dtb.mbpB_sha256>";
 				device = "/dev/mmcblk1p8";
-				installed-directly = true;
-			}
-			{
-				filename = "rootfs.ext4A";
-				sha256 = "<rootfs.ext4A_sha256>";
-				device = "/dev/mmcblk1p9";
 				installed-directly = true;
 			}
 			{
