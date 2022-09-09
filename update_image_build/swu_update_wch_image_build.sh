@@ -19,7 +19,7 @@ function print_help()
 	echo "-e enable emmc. default is sd."
 	echo "-s Specify public key file for sign image generation."
 	echo "-b soc name. Currently, imx8mm, imx6ull or imx6ullwch are supported."
-	echo "-g Compress image with gzip. Note that compressed package need to be decompressed in RAM. Make sure ram is enough to hold the image."
+	echo "-g Compress image with gzip. Note that if installed-directly = true; is not specified in sw-description, compressed package need to be decompressed in RAM. Make sure ram is enough to hold the image."
 	echo "-h print this help."
 }
 
