@@ -16,7 +16,7 @@ software =
 				sha256 = "<lk.imxB_sha256>";
 				device = "/dev/mmcblk1p4";
 				installed-directly = true;
-			}
+			},
 			{
 				filename = "zImageB";
 				sha256 = "<zImageB_sha256>";
@@ -28,7 +28,7 @@ software =
 				sha256 = "<imx6ull-14x14-evk-emmc.dtb.mbpB_sha256>";
 				device = "/dev/mmcblk1p8";
 				installed-directly = true;
-			}
+			},
 			{
 				filename = "rootfs.ext4B";
 				sha256 = "<rootfs.ext4B_sha256>";
@@ -38,16 +38,9 @@ software =
 		);
 		scripts: (
 			{
-				filename = "emmc_bootpart.sh";
-				sha256 = "<emmc_bootpart.sh_sha256>";
-				type = "postinstall";
-				installed-directly = true;
-			}
-			{
 				filename = "env_set_bootslot.sh";
 				sha256 = "<env_set_bootslot.sh_sha256>";
 				type = "postinstall";
-				installed-directly = true;
 			}
 		);
 	}
