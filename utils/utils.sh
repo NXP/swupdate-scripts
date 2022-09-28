@@ -108,7 +108,14 @@ function generate_sw_desc()
 	echo "image_list: $image_list"
 
 	echo "Generating software description file..."
-	cp $template_file $sw_desc_file
+	if [ -e $template_file ]; then
+		# template file can be found, so create a new sw-description file.
+		echo "Create new sw-description file"
+		cp $template_file $sw_desc_file
+	else
+		# No template file
+		echo "Use existing sw-description file"
+	fi
 	for each_item in $image_list; do
 		if [ x${compress_flag} == xtrue ]; then
 			sed -i "s/${each_item}/${each_item}.gz/" $sw_desc_file

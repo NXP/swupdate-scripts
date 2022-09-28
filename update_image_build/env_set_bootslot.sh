@@ -1,3 +1,5 @@
+#!/bin/sh
+
 echo "Set upgrade_available to 1"
 hub_setenv --upgrade_available 1
 

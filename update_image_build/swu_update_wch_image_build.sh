@@ -96,17 +96,6 @@ for each_img in ${UPDATE_IMAGES}; do
 done
 echo "DONE"
 
-# 3. Postscripts
-echo -n ">>>> Check post scripts..."
-if [[ -z "${POST_SCRIPTS}" ]]; then
-	echo "No post scripts to handle, ignored!"
-else
-	for each_item in ${POST_SCRIPTS}; do
-		UPDATE_IMAGE_FILES="${each_item} ${UPDATE_IMAGE_FILES}"
-	done
-fi
-echo "DONE"
-
 # 4. Compress update image files 
 if [ x${COMPRESS_FLAG} == xtrue ]; then
 	echo ">>>> Compress update images..."
@@ -119,9 +108,17 @@ if [ x${COMPRESS_FLAG} == xtrue ]; then
 	echo "DONE"
 fi
 
-# 5. Generate sw-decription file
-echo -n ">>>> Check sw-decription file..."
+# 5. Generate sw-decription file on images and scripts
+echo -n ">>>> Check sw-decription file for images..."
 generate_sw_desc ${WRK_DIR}/sw-description ${SW_DESCRIPTION_TEMPLATE} ${COMPRESS_FLAG} ${UPDATE_IMAGE_FILES}
+echo "DONE"
+
+echo -n ">>>> Check sw-decription file for scripts..."
+if [[ -z "${UPDATE_SCRIPTS}" ]]; then
+	echo "No post scripts to handle, ignored!"
+else
+	generate_sw_desc ${WRK_DIR}/sw-description false false ${UPDATE_SCRIPTS}
+fi
 echo "DONE"
 
 # 6. Check if need to sign image
@@ -155,6 +152,10 @@ for each_item in $UPDATE_IMAGE_FILES; do
 	else
 		UPDATE_FILES="$UPDATE_FILES ${each_item}"
 	fi
+done
+
+for each_item in $UPDATE_SCRIPTS; do
+	UPDATE_FILES="$UPDATE_FILES ${each_item}"
 done
 
 # 8. assemble cpio package.
