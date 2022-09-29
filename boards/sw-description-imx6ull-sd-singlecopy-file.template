@@ -3,6 +3,27 @@ software =
 	version = "1.0";
 	description = "Firmware update for test Project";
 	hardware-compatibility: [ "1.0", "1.2", "1.3"];
+
+	embedded-script ="
+--[[
+	SWUpdate Embedded Script Example
+]]
+-- Include swupdate library to use TRACE / ERROR
+require (\"swupdate\")
+
+function preinst()
+	local out = \"Post installed script called\"
+
+	return true, out
+end
+
+function postinst()
+	local out = \"Post installed script called\"
+
+	return true, out
+end
+";
+
 	imx6ull14x14evk: {
 		files: (
 			{
@@ -12,6 +33,7 @@ software =
 				device = "/dev/mmcblk1p1";
 				filesystem = "vfat";
 				installed-directly = true;
+				hook = "preinst";
 			},
 			{
 				filename = "imx6ull-14x14-evk.dtb";
@@ -20,6 +42,7 @@ software =
 				device = "/dev/mmcblk1p1";
 				filesystem = "vfat";
 				installed-directly = true;
+				hook = "preinst";
 			}
 		);
 		bootenv: (
