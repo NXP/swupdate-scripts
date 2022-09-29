@@ -1,47 +1,108 @@
 software =
 {
 	version = "1.0";
-	description = "Firmware update for test Project";
+	description = "Firmware update for wireless charger hub Project";
 	hardware-compatibility: [ "1.0", "1.2", "1.3"];
+
+	embedded-script ="
+--[[
+	This script will try to get /pro/cmdline and decide if the update is allowed.
+	We must use lua embedded script here, because install-directly is used.
+]]
+-- Include swupdate library to use TRACE / ERROR
+require (\"swupdate\")
+
+function os.capture(cmd)
+	local f = assert(io.popen(cmd, 'r'))
+	local s = assert(f:read('*a'))
+	f:close()
+	return s
+end
+
+function file_exists(filename)
+	local file=io.open(filename,'r')
+	if file~=nil then io.close(file) return true else return false end
+end
+
+function cmdexec(cmd)
+	local ret, s, status = os.execute(cmd)
+	if (status ~= 0) then
+		return false, cmd .. \" return with error\"
+	end
+
+	return true,\"\"
+end
+
+function writeToFile(filename, data)
+	local file=io.open(filename, 'w')
+	file:write(data)
+	file:close()
+end
+
+function readFromFile(filename)
+	if file_exists(filename) then
+		local file=io.open(filename, 'r')
+		local data = file:read(1)
+		file:close()
+		return data
+	else
+		return \"\"
+	end
+end
+
+function preinst()
+
+	local cmd = 'hub_printenv -f boot_slot'
+	local boot_slot = os.capture(cmd, 1)
+	if (boot_slot == \"A\") then
+		swupdate.trace(\"Slot is A. Updated allowed: go on !\")
+		return true
+	else
+		swupdate.trace(\"Slot is B. Updated forbidden: STOP !\")
+		return false
+	end
+end
+";
+
 	imx6ull14x14evk: {
 		images: (
-			{
-				filename = "ddr_cfg_samsung_iot_hub.imx.mbpB";
-				sha256 = "<ddr_cfg_samsung_iot_hub.imx.mbpB_sha256>";
-				device = "/dev/mmcblk1p2";
-				installed-directly = true;
-			},
-			{
-				filename = "lk.imxB";
-				sha256 = "<lk.imxB_sha256>";
-				device = "/dev/mmcblk1p4";
-				installed-directly = true;
-			},
-			{
-				filename = "zImageB";
-				sha256 = "<zImageB_sha256>";
-				device = "/dev/mmcblk1p6";
-				installed-directly = true;
-			},
-			{
-				filename = "imx6ull-14x14-evk-emmc.dtb.mbpB";
-				sha256 = "<imx6ull-14x14-evk-emmc.dtb.mbpB_sha256>";
-				device = "/dev/mmcblk1p8";
-				installed-directly = true;
-			},
-			{
-				filename = "rootfs.ext4B";
-				sha256 = "<rootfs.ext4B_sha256>";
-				device = "/dev/mmcblk1p10";
-				installed-directly = true;
-			}
+		{
+			filename = "ddr_cfg_samsung_iot_hub.imx.mbpB";
+			sha256 = "<ddr_cfg_samsung_iot_hub.imx.mbpB_sha256>";
+			device = "/dev/mmcblk1p2";
+			installed-directly = true;
+		},
+		{
+			filename = "lk.imxB";
+			sha256 = "<lk.imxB_sha256>";
+			device = "/dev/mmcblk1p4";
+			installed-directly = true;
+		},
+		{
+			filename = "zImageB";
+			sha256 = "<zImageB_sha256>";
+			device = "/dev/mmcblk1p6";
+			installed-directly = true;
+		},
+		{
+			filename = "imx6ull-14x14-evk-emmc.dtb.mbpB";
+			sha256 = "<imx6ull-14x14-evk-emmc.dtb.mbpB_sha256>";
+			device = "/dev/mmcblk1p8";
+			installed-directly = true;
+		}
+		{
+			filename = "rootfs.ext4B";
+			sha256 = "<rootfs.ext4B_sha256>";
+			device = "/dev/mmcblk1p10";
+			installed-directly = true;
+		}
 		);
 		scripts: (
-			{
-				filename = "env_set_bootslot.sh";
-				sha256 = "<env_set_bootslot.sh_sha256>";
-				type = "postinstall";
-			}
+		{
+			filename = "env_set_bootslot.sh";
+			sha256 = "<env_set_bootslot.sh_sha256>";
+			type = "postinstall";
+		}
 		);
 	}
 }
