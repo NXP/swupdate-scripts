@@ -54,12 +54,12 @@ function preinst()
 
 	local cmd = 'hub_printenv -f boot_slot'
 	local boot_slot = os.capture(cmd, 1)
-	if (boot_slot == \"A\") then
+	if (string.sub(boot_slot, 1, 1) == \"A\") then
 		swupdate.trace(\"Slot is A. Updated allowed: go on !\")
-		return true
+		return true, boot_slot
 	else
 		swupdate.trace(\"Slot is B. Updated forbidden: STOP !\")
-		return false
+		return false, boot_slot
 	end
 end
 ";
