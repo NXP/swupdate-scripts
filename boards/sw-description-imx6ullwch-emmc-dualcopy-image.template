@@ -71,30 +71,35 @@ end
 			sha256 = "<ddr_cfg_samsung_iot_hub.imx.mbpB_sha256>";
 			device = "/dev/mmcblk1p2";
 			installed-directly = true;
+			hook = "preinst"
 		},
 		{
 			filename = "lk.imxB";
 			sha256 = "<lk.imxB_sha256>";
 			device = "/dev/mmcblk1p4";
 			installed-directly = true;
+			hook = "preinst"
 		},
 		{
 			filename = "zImageB";
 			sha256 = "<zImageB_sha256>";
 			device = "/dev/mmcblk1p6";
 			installed-directly = true;
+			hook = "preinst"
 		},
 		{
 			filename = "imx6ull-14x14-evk-emmc.dtb.mbpB";
 			sha256 = "<imx6ull-14x14-evk-emmc.dtb.mbpB_sha256>";
 			device = "/dev/mmcblk1p8";
 			installed-directly = true;
+			hook = "preinst"
 		}
 		{
 			filename = "rootfs.ext4B";
 			sha256 = "<rootfs.ext4B_sha256>";
 			device = "/dev/mmcblk1p10";
 			installed-directly = true;
+			hook = "preinst"
 		}
 		);
 		scripts: (
