@@ -18,8 +18,8 @@ function print_help()
 	echo "-d enable double slot copy. default is single slot copy."
 	echo "-e enable emmc. default is sd."
 	echo "-s Specify public key file for sign image generation."
-	echo "-b soc name. Currently, imx8mm and imx6ull are supported."
-	echo "-g Compress image with gzip. Note that compressed package need to be decompressed in RAM. Make sure ram is enough to hold the image."
+	echo "-b soc name. Currently, imx93, imx8mm and imx6ull are supported."
+	echo "-g Compress image with gzip. Note that if installed-directly = true; is not specified in sw-description, compressed package need to be decompressed in RAM. Make sure ram is enough to hold the image."
 	echo "-h print this help."
 }
 
@@ -65,7 +65,7 @@ check_valid_boards $SOC
 SOC_ASSEMBLE_SETTING_FILE="cfg_${SOC}_update_image.cfg"
 source ${WRK_DIR}/../boards/${SOC_ASSEMBLE_SETTING_FILE}
 
-if [ -z "${OUTPUT_IMAGE_NAME}" ]; then
+if [[ -z "${OUTPUT_IMAGE_NAME}" ]]; then
 	if [ x"$SIGN_FLAG" == x"true" ]; then
 		OUTPUT_IMAGE_NAME=${SOC_NAME}_${UPDATE_CONTAINER_VER}_${UPDATE_BSP_VER}_${COPY_MODE}_${STORAGE_DEVICE}_image_${CUR_DATE}_sign.swu
 	else
@@ -99,7 +99,7 @@ echo "DONE"
 # 4. Compress update image files 
 if [ x${COMPRESS_FLAG} == xtrue ]; then
 	echo ">>>> Compress update images..."
-	for each_img in ${UPDATE_IMAGES}; do
+	for each_img in ${UPDATE_IMAGE_FILES}; do
 		img_name=$(echo $each_img | cut -d: -f1)
 		echo -n "Compressing $img_name..."
 		gzip -9kf ${img_name}
@@ -108,9 +108,17 @@ if [ x${COMPRESS_FLAG} == xtrue ]; then
 	echo "DONE"
 fi
 
-# 5. Generate sw-decription file
-echo -n ">>>> Check sw-decription file..."
+# 5. Generate sw-decription file on images and scripts
+echo -n ">>>> Check sw-decription file for images..."
 generate_sw_desc ${WRK_DIR}/sw-description ${SW_DESCRIPTION_TEMPLATE} ${COMPRESS_FLAG} ${UPDATE_IMAGE_FILES}
+echo "DONE"
+
+echo -n ">>>> Check sw-decription file for scripts..."
+if [[ -z "${UPDATE_SCRIPTS}" ]]; then
+	echo "No post scripts to handle, ignored!"
+else
+	generate_sw_desc ${WRK_DIR}/sw-description false false ${UPDATE_SCRIPTS}
+fi
 echo "DONE"
 
 # 6. Check if need to sign image
@@ -118,7 +126,7 @@ echo -n ">>>> Check if need a sign image..."
 UPDATE_FILES="sw-description"
 if [ x"$SIGN_FLAG" == x"true" ]; then
 	echo "YES"
-	if [ -z "${SIGN_PEM_FILE}" ]; then
+	if [[ -z "${SIGN_PEM_FILE}" ]]; then
 		echo "Error: please specify a pem file!"
 		exit 1
 	fi
@@ -144,6 +152,10 @@ for each_item in $UPDATE_IMAGE_FILES; do
 	else
 		UPDATE_FILES="$UPDATE_FILES ${each_item}"
 	fi
+done
+
+for each_item in $UPDATE_SCRIPTS; do
+	UPDATE_FILES="$UPDATE_FILES ${each_item}"
 done
 
 # 8. assemble cpio package.

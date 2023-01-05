@@ -6,7 +6,7 @@ function print_help()
 	echo "-o specify output image name. Default is swu_<SLOT>_rescue_<soc>_<storage>_<date>.sdcard"
 	echo "-d enable double slot copy. Default is single slot copy."
 	echo "-e enable emmc. Default is sd."
-	echo "-b soc name. Currently, imx8mm and imx6ull are supported."
+	echo "-b soc name. Currently, imx93, imx8mm and imx6ull are supported."
 	echo "-m Only regenerate or overwrite MBR. This option can be used to generate MBR individually."
 	echo "   Suppose that we don't need to generate MBR every time. Normally we only need to generate it once."
 	echo "-h print this help."
