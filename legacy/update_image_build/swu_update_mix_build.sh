@@ -120,17 +120,26 @@ echo "DONE"
 # 4. Compress update image files 
 if [ x${COMPRESS_FLAG} == xtrue ]; then
 	echo ">>>> Compress update images..."
-	for each_img in ${UPDATE_IMAGES}; do
-		echo -n "Compressing $each_img..."
-		gzip -9kf ${each_img}
+	for each_img in ${UPDATE_IMAGE_FILES}; do
+		img_name=$(echo $each_img | cut -d: -f1)
+		echo -n "Compressing $img_name..."
+		gzip -9kf ${img_name}
 		echo "OK"
 	done
 	echo "DONE"
 fi
 
-# 5. Generate sw-decription file
-echo -n ">>>> Check sw-decription file..."
-generate_sw_desc ${WRK_DIR}/sw-description $SW_DESCRIPTION_TEMPLATE ${COMPRESS_FLAG} $UPDATE_IMAGES
+# 5. Generate sw-decription file on images and scripts
+echo -n ">>>> Check sw-decription file for images..."
+generate_sw_desc ${WRK_DIR}/sw-description ${SW_DESCRIPTION_TEMPLATE} ${COMPRESS_FLAG} ${UPDATE_IMAGE_FILES}
+echo "DONE"
+
+echo -n ">>>> Check sw-decription file for scripts..."
+if [[ -z "${UPDATE_SCRIPTS}" ]]; then
+	echo "No post scripts to handle, ignored!"
+else
+	generate_sw_desc ${WRK_DIR}/sw-description false false ${UPDATE_SCRIPTS}
+fi
 echo "DONE"
 
 # 6. Check if need to sign image
@@ -138,7 +147,7 @@ echo -n ">>>> Check if need a sign image..."
 UPDATE_FILES="sw-description"
 if [ x"$SIGN_FLAG" == x"true" ]; then
 	echo "YES"
-	if [ -z "${SIGN_PEM_FILE}" ]; then
+	if [[ -z "${SIGN_PEM_FILE}" ]]; then
 		echo "Error: please specify a pem file!"
 		exit 1
 	fi
@@ -158,12 +167,16 @@ else
 	echo "NO"
 fi
 
-for each_item in $UPDATE_IMAGES; do
+for each_item in $UPDATE_IMAGE_FILES; do
 	if [ x${COMPRESS_FLAG} == xtrue ]; then
 		UPDATE_FILES="$UPDATE_FILES ${each_item}.gz"
 	else
 		UPDATE_FILES="$UPDATE_FILES ${each_item}"
 	fi
+done
+
+for each_item in $UPDATE_SCRIPTS; do
+	UPDATE_FILES="$UPDATE_FILES ${each_item}"
 done
 
 # 8. assemble cpio package.

@@ -88,10 +88,8 @@ for each_img in ${UPDATE_IMAGES}; do
 	img_truncate_size=$(echo $each_img | cut -d: -f2)
 	if [ -e ${WRK_DIR}/slot_update/${img_name} ]; then
 		cp ${WRK_DIR}/slot_update/${img_name} ${WRK_DIR}/
-		if [[ ! -z $img_truncate_size ]]; then
-			echo "Truncating ${WRK_DIR}/${img_name} to $img_truncate_size"
-			truncate -s $img_truncate_size ${WRK_DIR}/${img_name}
-		fi
+		echo "Truncating ${WRK_DIR}/${img_name} to $img_truncate_size"
+		truncate -s $img_truncate_size ${WRK_DIR}/${img_name}
 	fi
 	UPDATE_IMAGE_FILES="${img_name} ${UPDATE_IMAGE_FILES}"
 	test ! -e "${WRK_DIR}/${img_name}" && echo "${WRK_DIR}/${img_name} not exists!!!" && exit -1;

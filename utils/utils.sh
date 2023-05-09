@@ -208,13 +208,13 @@ function check_valid_boards()
 	else
 		VALID_SOC_FLAG=false
 		for each_item in $SUPPORTED_SOC; do
-			if [ x${each_item} == x${SOC} ]; then
+			if [ x${each_item} == x${soc_name} ]; then
 				VALID_SOC_FLAG=true
 			fi
 		done
 		if [ x${VALID_SOC_FLAG} == x"${false}" ]; then
-			echo "Not supported SoC: ${SOC}"
-			exit -1
+			echo "Not supported SoC: ${soc_name}"
+			exit 1
 		fi
 	fi
 }
