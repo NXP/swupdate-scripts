@@ -1,4 +1,9 @@
 #!/usr/bin/bash
+#
+# Copyright 2022-2023 NXP
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
 
 function generate_padding_file()
 {
