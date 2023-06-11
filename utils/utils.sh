@@ -159,6 +159,19 @@ function generate_pt_tbl_dualslot()
 		exit -1
 	fi
 
+	case $PT_FMT in
+		MBR)
+			sudo parted ${PT_DISKLABEL} mklabel msdos
+			;;
+		GPT)
+			sudo parted ${PT_DISKLABEL} mklabel gpt
+			;;
+		?)
+			echo "Invalid partition type!"
+			exit -1
+			;;
+	esac
+
 	for each_item in $IMAGE_PT_TBL_STRUCT; do
 		local pt_index=$(echo $each_item | cut -d: -f1)
 		local pt_name=$(echo $each_item | cut -d: -f2)
