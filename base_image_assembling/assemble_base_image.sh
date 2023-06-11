@@ -26,7 +26,7 @@ COPY_MODE="singlecopy"
 STORAGE_EMMC_FLAG=false
 STORAGE_DEVICE="sd"
 PT_SIZE=''
-GENERATE_MBR_ONLY_FLAG=false
+GENERATE_PT_TBL_ONLY_FLAG=false
 
 while getopts "o:deb:mh" arg; do
 	case $arg in
@@ -45,7 +45,7 @@ while getopts "o:deb:mh" arg; do
 			SOC=$OPTARG
 			;;
 		m)
-			GENERATE_MBR_ONLY_FLAG=true
+			GENERATE_PT_TBL_ONLY_FLAG=true
 			;;
 		h)
 			print_help
@@ -89,7 +89,7 @@ if [ x$GENERATE_PT_TBL_ONLY_FLAG == xtrue ]; then
 	fi
 	echo "Generating ${IMAGE_PT_TBL_PATH}"
 	cd $PT_FILEDIR
-	generate_pt_tbl_dualslot $PT_FILENAME $IMAGE_PT_SIZE $IMAGE_PT_TBL_FMT
+	generate_pt_tbl_dualslot $PT_FILENAME $IMAGE_PT_TBL_SIZE $IMAGE_PT_TBL_FMT
 	cd -
 	echo "DONE"
 	exit 0
