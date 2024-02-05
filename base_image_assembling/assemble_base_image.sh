@@ -7,7 +7,7 @@
 
 function print_help()
 {
-	echo "$0 - generate update image"
+	echo "$0 - generate base image"
 	echo "-o specify output image name. Default is swu_<SLOT>_rescue_<soc>_<storage>_<date>.sdcard"
 	echo "-d enable double slot copy. Default is single slot copy."
 	echo "-e enable emmc. Default is sd."
@@ -26,7 +26,7 @@ COPY_MODE="singlecopy"
 STORAGE_EMMC_FLAG=false
 STORAGE_DEVICE="sd"
 PT_SIZE=''
-GENERATE_MBR_ONLY_FLAG=false
+GENERATE_PT_TBL_ONLY_FLAG=false
 
 while getopts "o:deb:mh" arg; do
 	case $arg in
@@ -45,7 +45,7 @@ while getopts "o:deb:mh" arg; do
 			SOC=$OPTARG
 			;;
 		m)
-			GENERATE_MBR_ONLY_FLAG=true
+			GENERATE_PT_TBL_ONLY_FLAG=true
 			;;
 		h)
 			print_help
@@ -89,10 +89,9 @@ if [ x$GENERATE_PT_TBL_ONLY_FLAG == xtrue ]; then
 	fi
 	echo "Generating ${IMAGE_PT_TBL_PATH}"
 	cd $PT_FILEDIR
-	generate_pt_tbl_dualslot $PT_FILENAME $IMAGE_PT_SIZE $IMAGE_PT_TBL_FMT
+	generate_pt_tbl_dualslot $PT_FILENAME $IMAGE_PT_TBL_SIZE $IMAGE_PT_TBL_FMT
 	cd -
 	echo "DONE"
-	exit 0
 else
 	if [ ! -e ${IMAGE_PT_TBL_PATH} ]; then
 		echo -n "\nNo partition table file, will generate ..."
@@ -183,6 +182,7 @@ else
 		touch $TMP_BIN_FILE
 		generate_padding_file $pad_start $img_file $pad_end $TMP_BIN_FILE
 		if [ $? != 0 ]; then
+			echo "Error padding ramdisk image"
 			rm -f $TMP_BIN_FILE
 			exit 1
 		fi

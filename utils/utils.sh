@@ -153,13 +153,31 @@ function generate_pt_tbl_dualslot()
         exit 1
 	fi
 
+	echo "Partition Disk Label: $PT_DISKLABEL"
+	echo "Partition File Size:  $PT_FILESIZE"
+	echo "Partition Format:     $PT_FMT"
+
 	truncate -s ${PT_FILESIZE} ${PT_DISKLABEL}
 	if [ $? != 0 ]; then
 		echo "truncate to ${PT_FILESIZE} on ${PT_DISKLABEL} failed!"
 		exit -1
 	fi
 
-	for each_item in $IMAGE_PT_TBL_STRUCT; do
+	# Init partition
+	case $PT_FMT in
+		MBR)
+			sudo parted -s ${PT_DISKLABEL} mklabel msdos
+			;;
+		GPT)
+			echo "No need to init partition for GPT format."
+			;;
+		?)
+			echo "Invalid partition type!"
+			exit -1
+			;;
+	esac
+	# Make partitions
+	for each_item in $IMAGE_PT_TABLE_STRUCT; do
 		local pt_index=$(echo $each_item | cut -d: -f1)
 		local pt_name=$(echo $each_item | cut -d: -f2)
 		local pt_start=$(echo $each_item | cut -d: -f3)
@@ -182,7 +200,7 @@ function generate_pt_tbl_dualslot()
 			exit -1
 		fi
 	done
-
+	# Print partitions
 	case $PT_FMT in
 		MBR)
 			sudo parted ${PT_DISKLABEL} unit MiB print
