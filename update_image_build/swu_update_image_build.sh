@@ -9,7 +9,6 @@ SIGN_PEM_FILE=""
 SIGN_FLAG=false
 WRK_DIR="$(pwd)"
 OUTPUT_IMAGE_NAME=""
-DOUBLESLOT_FLAG=false
 COPY_MODE="singlecopy"
 STORAGE_EMMC_FLAG=false
 STORAGE_DEVICE="sd"
@@ -38,7 +37,6 @@ while getopts "s:o:b:degh" arg; do
 			OUTPUT_IMAGE_NAME=$OPTARG
 			;;
 		d)
-			DOUBLESLOT_FLAG=true
 			COPY_MODE="doublecopy"
 			;;
 		e)
@@ -87,7 +85,7 @@ echo "DONE"
 
 # 2. Test if all needed images exist
 echo -n ">>>> Testing update images..."
-UPDATE_IMAGE_FILES=""
+UPDATE_IMAGES_LIST=""
 for each_img in ${UPDATE_IMAGES}; do
 	img_name=$(echo $each_img | cut -d: -f1)
 	img_truncate_size=$(echo $each_img | cut -d: -f2)
@@ -98,7 +96,7 @@ for each_img in ${UPDATE_IMAGES}; do
 			truncate -s $img_truncate_size ${WRK_DIR}/${img_name}
 		fi
 	fi
-	UPDATE_IMAGE_FILES="${img_name} ${UPDATE_IMAGE_FILES}"
+	UPDATE_IMAGES_LIST="${img_name} ${UPDATE_IMAGES_LIST}"
 	test ! -e "${WRK_DIR}/${img_name}" && echo "${WRK_DIR}/${img_name} not exists!!!" && exit -1;
 done
 echo "DONE"
@@ -106,7 +104,7 @@ echo "DONE"
 # 4. Compress update image files 
 if [ x${COMPRESS_FLAG} == xtrue ]; then
 	echo ">>>> Compress update images..."
-	for each_img in ${UPDATE_IMAGE_FILES}; do
+	for each_img in ${UPDATE_IMAGES_LIST}; do
 		img_name=$(echo $each_img | cut -d: -f1)
 		echo -n "Compressing $img_name..."
 		gzip -9kf ${img_name}
@@ -115,9 +113,9 @@ if [ x${COMPRESS_FLAG} == xtrue ]; then
 	echo "DONE"
 fi
 
-# 5. Generate sw-decription file on images and scripts
-echo -n ">>>> Check sw-decription file for images..."
-generate_sw_desc ${WRK_DIR}/sw-description ${SW_DESCRIPTION_TEMPLATE} ${COMPRESS_FLAG} ${UPDATE_IMAGE_FILES}
+# 5. Generate sw-description file on images and scripts
+echo -n ">>>> Check sw-description file for images..."
+generate_sw_desc ${WRK_DIR}/sw-description ${SW_DESCRIPTION_TEMPLATE} ${COMPRESS_FLAG} ${UPDATE_IMAGES_LIST}
 echo "DONE"
 
 echo -n ">>>> Check sw-decription file for scripts..."
@@ -130,14 +128,14 @@ echo "DONE"
 
 # 6. Check if need to sign image
 echo -n ">>>> Check if need a sign image..."
-UPDATE_FILES="sw-description"
+CPIO_FILES_LIST="sw-description"
 if [ x"$SIGN_FLAG" == x"true" ]; then
 	echo "YES"
 	if [[ -z "${SIGN_PEM_FILE}" ]]; then
 		echo "Error: please specify a pem file!"
 		exit 1
 	fi
-	UPDATE_FILES="$UPDATE_FILES sw-description.sig"
+	CPIO_FILES_LIST="$CPIO_FILES_LIST sw-description.sig"
 
 	echo -n ">>>> Generating signature..."
 	#if you use RSA
@@ -153,22 +151,22 @@ else
 	echo "NO"
 fi
 
-for each_item in $UPDATE_IMAGE_FILES; do
+for each_item in $UPDATE_IMAGES_LIST; do
 	if [ x${COMPRESS_FLAG} == xtrue ]; then
-		UPDATE_FILES="$UPDATE_FILES ${each_item}.gz"
+		CPIO_FILES_LIST="$CPIO_FILES_LIST ${each_item}.gz"
 	else
-		UPDATE_FILES="$UPDATE_FILES ${each_item}"
+		CPIO_FILES_LIST="$CPIO_FILES_LIST ${each_item}"
 	fi
 done
 
 for each_item in $UPDATE_SCRIPTS; do
-	UPDATE_FILES="$UPDATE_FILES ${each_item}"
+	CPIO_FILES_LIST="$CPIO_FILES_LIST ${each_item}"
 done
 
 # 8. assemble cpio package.
 echo ">>>> Creating CPIO package..."
-echo $UPDATE_FILES
-for each_item in $UPDATE_FILES; do
+echo $CPIO_FILES_LIST
+for each_item in $CPIO_FILES_LIST; do
 	echo ${each_item}
 done | cpio -ov -H crc > $OUTPUT_IMAGE_NAME
 echo "DONE"
