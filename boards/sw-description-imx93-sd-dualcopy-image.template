@@ -1,0 +1,51 @@
+software =
+{
+	version = "1.0";
+	description = "Firmware update for test Project";
+	hardware-compatibility: [ "1.0", "1.2", "1.3"];
+	imx93evk: {
+		files: (
+			{
+                filename = "Image";
+                path="/Image"
+                sha256 = "<Image_sha256>";
+                device = "/dev/mmcblk1p3";
+                filesystem = "vfat";
+				installed-directly = true;
+            },
+            {
+                filename = "imx93-11x11-evk.dtb";
+                path="/imx93-11x11-evk.dtb"
+                sha256 = "<imx93-11x11-evk.dtb_sha256>";
+                device = "/dev/mmcblk1p3";
+                filesystem = "vfat";
+				installed-directly = true;
+            }
+		);
+		images: (
+			{
+				filename = "core-image-base-imx93evk.ext4";
+				sha256 = "<core-image-base-imx93evk.ext4_sha256>";
+				device = "/dev/mmcblk1p4";
+				installed-directly = true;
+			},
+			{
+				filename = "imx-boot-imx93evk-sd.bin-flash_singleboot";
+				sha256 = "<imx-boot-imx93evk-sd.bin-flash_singleboot_sha256>";
+				device = "/dev/mmcblk1";
+				offset = "32K";
+				installed-directly = true;
+			}
+		);
+		bootenv: (
+			{
+				name = "upgrade_available";
+				value = "1";
+			},
+			{
+				name = "bootslot";
+				value = "dualB";
+			}
+		);
+	}
+}
