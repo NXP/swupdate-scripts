@@ -159,6 +159,10 @@ function generate_pt_tbl_dualslot()
 		exit -1
 	fi
 
+	if [ "$PT_FMT" == "MBR" ]; then
+		parted ${PT_DISKLABEL} mklabel msdos
+	fi
+
 	for each_item in $IMAGE_PT_TBL_STRUCT; do
 		local pt_index=$(echo $each_item | cut -d: -f1)
 		local pt_name=$(echo $each_item | cut -d: -f2)
@@ -167,7 +171,7 @@ function generate_pt_tbl_dualslot()
 		local pt_fs=$(echo $each_item | cut -d: -f5)
 		case $PT_FMT in
 			MBR)
-				sudo parted ${PT_DISKLABEL} unit MiB mkpart primary ${pt_fs} ${pt_start} ${pt_end}
+				parted ${PT_DISKLABEL} unit MiB mkpart primary ${pt_fs} ${pt_start} ${pt_end}
 				;;
 			GPT)
 				sudo sgdisk -a 8 -n ${pt_index}:${pt_start}:${pt_end} -t ${pt_index}:${pt_fs} -c ${pt_index}:${pt_name} -e ${PT_DISKLABEL}
@@ -185,7 +189,7 @@ function generate_pt_tbl_dualslot()
 
 	case $PT_FMT in
 		MBR)
-			sudo parted ${PT_DISKLABEL} unit MiB print
+			parted ${PT_DISKLABEL} unit MiB print
 			;;
 		GPT)
 			sudo sgdisk -p -e ${PT_DISKLABEL}
