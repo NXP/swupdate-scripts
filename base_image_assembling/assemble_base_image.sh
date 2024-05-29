@@ -209,9 +209,7 @@ else
 		exit -1
 	fi
 	calculate_pt_size $SLOTA_ROOTFS PT_SIZE
-	truncate -s $PT_SIZE $ROOTFS_IMG
-	e2fsck -f $ROOTFS_IMG
-	resize2fs $ROOTFS_IMG
+	resize_rootfs_for_partition $ROOTFS_IMG $PT_SIZE
 	for each_item in $SLOTA_IMAGES; do
 		item_path=$(echo $each_item | cut -d: -f1)
 		cat $item_path >> $OUTPUT_IMAGE_NAME
@@ -237,9 +235,7 @@ if [ x$DOUBLESLOT_FLAG == x"true" ]; then
 			exit -1
 		fi
 		calculate_pt_size $SLOTB_ROOTFS PT_SIZE
-		truncate -s $PT_SIZE $ROOTFS_IMG
-		e2fsck -f $ROOTFS_IMG
-		resize2fs $ROOTFS_IMG
+		resize_rootfs_for_partition $ROOTFS_IMG $PT_SIZE
 		for each_item in $SLOTB_IMAGES; do
 			item_path=$(echo $each_item | cut -d: -f1)
 			cat $item_path >> $OUTPUT_IMAGE_NAME

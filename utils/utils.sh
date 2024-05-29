@@ -242,3 +242,25 @@ function check_valid_boards()
 		fi
 	fi
 }
+
+function resize_rootfs_for_partition()
+{
+	local img_path=$1
+	local pt_size=$2
+
+	truncate -s $pt_size $img_path
+	if [ $? != 0 ]; then
+		echo "truncate failed!"
+		exit -1
+	fi
+	e2fsck -f $img_path
+	if [ $? != 0 ]; then
+		echo "e2fsck failed! pls check error message and search AN for solution!"
+		exit -1
+	fi
+	resize2fs $img_path
+	if [ $? != 0 ]; then
+		echo "resize2fs failed!"
+		exit -1
+	fi
+}
