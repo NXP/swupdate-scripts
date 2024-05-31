@@ -123,8 +123,9 @@ function generate_sw_desc()
 	fi
 	for each_item in $image_list; do
 		if [ x${compress_flag} == xtrue ]; then
-			sed -i "s/${each_item}/${each_item}.gz/" $sw_desc_file
 			hash_filename=${each_item}.gz
+			sed -i "s/\"${each_item}\"/\"${hash_filename}\"/" $sw_desc_file
+			sed -i "s/\"<${each_item}_sha256>\"/\"<${hash_filename}_sha256>\"/" $sw_desc_file
 			sed -i "/<${hash_filename}_sha256>/acompressed = \"zlib\";" $sw_desc_file
 		else
 			hash_filename=${each_item}
